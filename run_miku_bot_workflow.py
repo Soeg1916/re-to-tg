@@ -3,12 +3,11 @@ IMPORTANT: This file is specifically for the run_miku_bot workflow.
 It explicitly checks for port conflicts and runs the bot without the web interface.
 """
 import os
-import socket
 import sys
+import socket
 import logging
-from standalone_bot import run_standalone
 
-# Configure logging
+# Set up logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -16,6 +15,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# Check if a port is already in use
 def is_port_in_use(port):
     """Check if a port is already in use"""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -23,54 +23,51 @@ def is_port_in_use(port):
 
 def main():
     """Run the Miku bot in standalone mode, avoiding port conflicts"""
-    print("====================================================")
-    print("MIKU BOT WORKFLOW RUNNER (for run_miku_bot workflow)")
-    print("====================================================")
+    # Check if we're in the run_miku_bot workflow
+    workflow = os.environ.get('REPL_WORKFLOW', '')
+    print(f"Current workflow: {workflow}")
     
-    # Check if port 5000 is already in use (likely by the web app)
+    # If port 5000 is in use, force standalone mode
     if is_port_in_use(5000):
-        # Import necessary modules at runtime to avoid circular imports
-        import time
-        from flask import Flask, redirect
+        print("Port 5000 is already in use. Running bot in standalone mode.")
+        import run_bot_override
+        return
+    
+    # But also run standalone if we're in the run_miku_bot workflow
+    if workflow == 'run_miku_bot':
+        print("Detected run_miku_bot workflow. Running bot in standalone mode.")
+        import run_bot_override
+        return
+    
+    # Otherwise, run in combined mode
+    try:
+        print("Running in combined mode.")
+        from flask import Flask
         
-        print("Port 5000 is already in use")
-        print("Starting simple redirect server on port 8080...")
+        app = Flask(__name__)
         
-        # Create a super simple Flask app just for redirecting
-        redirect_app = Flask(__name__)
-        
-        @redirect_app.route('/')
+        @app.route('/')
         def home():
-            return redirect('/status')
+            return "Miku Bot Running"
             
-        @redirect_app.route('/status')
+        @app.route('/status')
         def status():
-            return f"""
-            <html>
-            <head>
-                <meta http-equiv="refresh" content="0;url=http://localhost:5000/status">
-                <title>Redirecting to Miku Bot Dashboard</title>
-            </head>
-            <body>
-                <h1>Redirecting to the Miku Bot Dashboard...</h1>
-                <p>If you are not redirected, <a href="http://localhost:5000/status">click here</a>.</p>
-                <script>
-                    window.location.href = window.location.origin.replace(':8080', ':5000') + '/status';
-                </script>
-            </body>
-            </html>
-            """
-            
-        # Run the redirect app
-        redirect_app.run(host='0.0.0.0', port=8080)
-                
-    # If this else statement is reached, there would be monitor code here
-    else:
-        print("Port 5000 is available, but still using standalone mode for consistency...")
+            return "Bot is active"
         
-        # ALWAYS run in standalone mode to avoid conflicts
-        print("Starting Miku bot in standalone mode...")
-        run_standalone()
-
+        # Start the bot in a separate thread
+        import threading
+        from bot import setup_bot
+        
+        bot_thread = threading.Thread(target=setup_bot)
+        bot_thread.daemon = True
+        bot_thread.start()
+        
+        # Run the Flask app
+        app.run(host='0.0.0.0', port=5000)
+    except ImportError:
+        # If Flask import fails, run standalone
+        print("Could not import Flask. Running in standalone mode.")
+        import run_bot_override
+        
 if __name__ == "__main__":
     main()

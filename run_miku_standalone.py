@@ -4,11 +4,10 @@ This script is specifically designed for the run_miku_bot workflow.
 """
 import os
 import sys
+import time
 import logging
-import socket
-from standalone_bot import run_standalone
 
-# Configure logging
+# Set up logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -16,11 +15,36 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-if __name__ == "__main__":
-    print("==============================================")
-    print("MIKU BOT STANDALONE MODE - NO WEB INTERFACE")
-    print("This script does NOT use Flask or web dependencies")
-    print("==============================================")
+print("============================================")
+print("MIKU BOT STANDALONE RUNNER")
+print("This script completely bypasses Flask")
+print("============================================")
+
+try:
+    # The simplest approach - directly import and run our bot override module
+    # which completely bypasses Flask
+    import run_bot_override
     
-    # Run the bot in standalone mode
-    run_standalone()
+except Exception as e:
+    logger.error(f"Critical error in bot startup: {e}")
+    import traceback
+    traceback.print_exc()
+    
+    # Keep alive on error
+    while True:
+        logger.error("Error occurred. Waiting 60 seconds before retry...")
+        time.sleep(60)
+        try:
+            # Try direct access to bot module
+            print("Attempting direct bot setup...")
+            from bot import setup_bot
+            bot = setup_bot()
+            if bot:
+                print("Bot recovered!")
+                bot.idle()
+        except Exception as e:
+            logger.error(f"Recovery attempt failed: {e}")
+            
+if __name__ == "__main__":
+    # This script is intended to be run directly
+    pass
