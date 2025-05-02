@@ -4,7 +4,7 @@ import random
 import praw
 from config import (
     REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT,
-    MIKU_SUBREDDITS, WAIFU_PICS_API, ANIME_PICS_API, SAFEBOORU_API
+    SUBREDDITS as MIKU_SUBREDDITS, WAIFU_PICS_API, ANIME_PICS_API, SAFEBOORU_API
 )
 import time
 
@@ -150,7 +150,7 @@ def fetch_reddit_post():
                                      'headphones' in title_lower)
             
             # For the MikuNakano and Nakano_Miku subreddits, all posts are about Miku
-            if subreddit_name in ['MikuNakano', 'Nakano_Miku', 'churchofmiku']:
+            if subreddit_name in ['MikuNakano', 'Nakano_Miku']:
                 has_miku_reference = True
                 
             # Add to our list if it meets both criteria

@@ -5,7 +5,8 @@ Detects new posts from Miku-related subreddits and manages batched posting.
 import logging
 import time
 from datetime import datetime
-from api_clients import reddit_client, MIKU_SUBREDDITS
+from api_clients import reddit_client
+from config import SUBREDDITS as MIKU_SUBREDDITS
 from storage import load_post_history, add_to_history, is_in_history
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,7 @@ def is_miku_post(post, subreddit_name):
         return False
     
     # For Miku-specific subreddits, all posts are considered Miku-related
-    if subreddit_name in ['MikuNakano', 'Nakano_Miku', 'churchofmiku']:
+    if subreddit_name in ['MikuNakano', 'Nakano_Miku']:
         return True
     
     # For other subreddits, check if the title contains Miku-related keywords
