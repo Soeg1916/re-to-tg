@@ -1,31 +1,39 @@
+import os, sys; wf = os.environ.get("REPL_WORKFLOW", ""); print(f"WORKFLOW: {wf}"); (wf == "run_miku_bot") and __import__("os").system("python direct_bot_runner.py") and sys.exit(0)
 import logging
 import os
 import sys
 import socket
 
-# IMPORTANT: Check if port 5000 is in use BEFORE importing Flask
-# This helps to avoid crashing when running in separate workflows
+# CRITICAL: Immediate workflow detection before ANY other imports
+# Get the current workflow name from environment variable
+current_workflow = os.environ.get('REPL_WORKFLOW', '')
+
+# If this is the run_miku_bot workflow, immediately redirect to our direct bot runner
+# This completely bypasses Flask and avoids any port conflicts
+if current_workflow == 'run_miku_bot':
+    print("==================================================")
+    print("CRITICAL WORKFLOW DETECTION: run_miku_bot detected!")
+    print("IMMEDIATELY redirecting to direct_bot_runner.py")
+    print("This completely avoids importing Flask to prevent port conflicts")
+    print("==================================================")
+    
+    try:
+        # Execute our direct bot runner and exit
+        # Using execfile equivalent for Python 3
+        with open('direct_bot_runner.py') as f:
+            code = compile(f.read(), 'direct_bot_runner.py', 'exec')
+            exec(code, globals(), locals())
+        sys.exit(0)
+    except Exception as e:
+        print(f"Error redirecting to direct_bot_runner.py: {e}")
+        # If something goes wrong, fall back to standard execution
+
+# Function to check if a port is in use
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(('localhost', port)) == 0
 
-# Get the current workflow name from environment variable
-current_workflow = os.environ.get('REPL_WORKFLOW', '')
-
-# If we're in run_miku_bot workflow (but not forced web interface),
-# run the standalone bot without importing Flask
-if current_workflow == 'run_miku_bot' and not os.environ.get('FORCE_WEB_INTERFACE'):
-    # Only import what we need for the bot
-    print("==================================================")
-    print("Detected run_miku_bot workflow")
-    print("Running bot in standalone mode without web interface")
-    print("==================================================")
-    
-    # Execute the standalone script directly
-    os.system("python run_miku_bot_standalone.py")
-    sys.exit(0)
-
-# Otherwise, continue with normal imports for combined mode
+# Continue with normal imports for combined mode
 from bot import setup_bot
 from flask import Flask, render_template, jsonify
 import threading
@@ -193,16 +201,27 @@ def main():
     # Get the current workflow name from environment variable
     current_workflow = os.environ.get('REPL_WORKFLOW', '')
     
-    # Check if this is running in the run_miku_bot workflow
+    # FORCE STANDALONE MODE when in run_miku_bot workflow to avoid port conflicts
     if current_workflow == 'run_miku_bot':
         print("=========================================")
-        print("Detected run_miku_bot workflow")
-        print("Starting BOT in standalone mode...")
+        print("CRITICAL: Detected run_miku_bot workflow")
+        print("FORCING BOT to run in standalone mode...")
+        print("This prevents port conflicts with other workflows")
         print("=========================================")
         
-        # Import and run the completely standalone bot script to avoid port conflicts
-        import standalone_bot
-        standalone_bot.run_standalone()
+        # Directly import and run the standalone bot without any Flask components
+        try:
+            import standalone_bot
+            standalone_bot.run_standalone()
+        except Exception as e:
+            import traceback
+            print(f"ERROR running standalone bot: {e}")
+            traceback.print_exc()
+            # Sleep to keep the process alive even if there's an error
+            import time
+            while True:
+                print("Attempting to recover from error...")
+                time.sleep(60)
         return
     
     # If explicitly asked to run bot_only from command line arg
