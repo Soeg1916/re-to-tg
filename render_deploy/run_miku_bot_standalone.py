@@ -12,6 +12,25 @@ import traceback
 import requests
 from bot import setup_bot
 
+# Constants
+BOT_RUNNING_MARKER = "/tmp/bot_running.txt"
+BOT_LAST_SEEN_MARKER = "/tmp/bot_last_seen.txt"
+
+def update_status_markers():
+    """Create or update status marker files for the web dashboard"""
+    try:
+        # Create or update the running marker
+        with open(BOT_RUNNING_MARKER, "w") as f:
+            f.write("running")
+            
+        # Update the last seen timestamp
+        with open(BOT_LAST_SEEN_MARKER, "w") as f:
+            f.write(str(int(time.time())))
+            
+        logger.debug("Updated status markers")
+    except Exception as e:
+        logger.error(f"Error updating status markers: {e}")
+
 # Set up logging with more verbose output for production
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -58,8 +77,8 @@ def is_bot_already_running():
 # Force standalone mode for workflow, but only if another instance isn't running
 def force_standalone_bot():
     print("============================================")
-    print("MIKU BOT FORCED STANDALONE MODE")
-    print("This script bypasses Flask completely")
+    print("MIKU BOT FORCED STANDALONE MODE (RENDER)")
+    print("This script is optimized for Render deployment")
     print("============================================")
     
     # Check if another instance is already running
@@ -67,11 +86,15 @@ def force_standalone_bot():
         print("Another instance of the bot is already running!")
         print("This instance will act as a monitor only.")
         
+        # Create status markers for the web dashboard
+        update_status_markers()
+        
         # Just keep this process alive without starting another bot
         try:
             while True:
                 time.sleep(60)
-                print("Monitoring... Bot is running in another workflow.")
+                update_status_markers()  # Update markers periodically
+                print("Monitoring... Bot is running in another instance.")
         except KeyboardInterrupt:
             print("Monitor stopped.")
         return
@@ -81,18 +104,37 @@ def force_standalone_bot():
         from api_clients import initialize_reddit_client
         reddit_client = initialize_reddit_client()
         
+        # Create initial status markers
+        update_status_markers()
+        
         # Start the bot directly without Flask
         updater = setup_bot()
+        
+        # Set up a background thread to update status markers
+        import threading
+        def status_updater():
+            while True:
+                try:
+                    time.sleep(30)
+                    update_status_markers()
+                except Exception as e:
+                    logger.error(f"Error in status updater: {e}")
+        
+        # Start the status updater thread
+        status_thread = threading.Thread(target=status_updater, daemon=True)
+        status_thread.start()
         
         # Keep the script running with proper signal handling
         if updater:
             print("Bot setup successful. Starting to poll for updates...")
-            print("Press Ctrl+C to stop the bot")
+            print("Status tracking enabled for web dashboard")
             updater.idle()
         else:
             print("Bot setup failed. Check logs for details.")
+            # Keep updating status even if bot setup failed
             while True:
-                time.sleep(10)
+                time.sleep(30)
+                update_status_markers()
     except Exception as e:
         logger.error(f"Error running standalone bot: {e}")
         traceback.print_exc()
