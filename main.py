@@ -200,10 +200,9 @@ def main():
         print("Starting BOT in standalone mode...")
         print("=========================================")
         
-        # Run the dedicated workflow script for run_miku_bot
-        # This script is designed to avoid port conflicts
-        import run_miku_bot_workflow
-        run_miku_bot_workflow.main()
+        # Import and run the completely standalone bot script to avoid port conflicts
+        import standalone_bot
+        standalone_bot.run_standalone()
         return
     
     # If explicitly asked to run bot_only from command line arg
