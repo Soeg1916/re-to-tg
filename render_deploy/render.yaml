@@ -1,0 +1,32 @@
+services:
+  # Web service for the dashboard
+  - type: web
+    name: miku-bot-dashboard
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT main:app
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TARGET_CHANNEL
+        sync: false
+      - key: REDDIT_CLIENT_ID
+        sync: false
+      - key: REDDIT_CLIENT_SECRET
+        sync: false
+
+  # Worker service for the bot
+  - type: worker
+    name: miku-bot-worker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run_miku_bot_standalone.py
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TARGET_CHANNEL
+        sync: false
+      - key: REDDIT_CLIENT_ID
+        sync: false
+      - key: REDDIT_CLIENT_SECRET
+        sync: false

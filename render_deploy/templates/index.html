@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #e91e63;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .status-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .status-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .online {
+            background-color: #4CAF50;
+        }
+        
+        .offline {
+            background-color: #F44336;
+        }
+        
+        .status-text {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .card h2 {
+            margin-top: 0;
+            color: #e91e63;
+            font-size: 18px;
+        }
+        
+        .post-history {
+            margin-top: 30px;
+        }
+        
+        .post-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .post-item:last-child {
+            border-bottom: none;
+        }
+        
+        .post-thumbnail {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-right: 15px;
+        }
+        
+        .post-info {
+            flex-grow: 1;
+        }
+        
+        .post-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .post-source {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .post-time {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .button {
+            display: inline-block;
+            background-color: #e91e63;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .button:hover {
+            background-color: #c2185b;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Miku Bot Dashboard</h1>
+        
+        <div class="card">
+            <div class="status-container">
+                <div id="status-indicator" class="status-indicator offline"></div>
+                <div id="status-text" class="status-text">Checking status...</div>
+            </div>
+            <div id="last-seen-container" style="text-align: center; font-size: 14px; color: #666; display: none;">
+                Last seen: <span id="last-seen-time">Unknown</span>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Actions</h2>
+            <div class="buttons">
+                <a href="/api/test_post/fact" class="button" id="btn-post-fact">Post Fact</a>
+                <a href="/api/test_post/image" class="button" id="btn-post-image">Post Image</a>
+                <a href="/api/test_post/reddit" class="button" id="btn-post-reddit">Post from Reddit</a>
+            </div>
+        </div>
+        
+        <div class="post-history">
+            <h2>Recent Posts</h2>
+            <div id="post-history-container" class="loading">
+                Loading post history...
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Function to format timestamp
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return 'Unknown';
+            const date = new Date(timestamp * 1000);
+            return date.toLocaleString();
+        }
+        
+        // Function to format time ago
+        function timeAgo(timestamp) {
+            if (!timestamp) return '';
+            
+            const seconds = Math.floor((Date.now() / 1000 - timestamp));
+            
+            if (seconds < 60) return `${seconds} seconds ago`;
+            
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+            
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+            
+            const days = Math.floor(hours / 24);
+            return `${days} day${days !== 1 ? 's' : ''} ago`;
+        }
+        
+        // Function to update status
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    // Update status indicator
+                    const statusIndicator = document.getElementById('status-indicator');
+                    const statusText = document.getElementById('status-text');
+                    
+                    if (data.is_running) {
+                        statusIndicator.className = 'status-indicator online';
+                        statusText.innerText = 'Online';
+                    } else {
+                        statusIndicator.className = 'status-indicator offline';
+                        statusText.innerText = 'Offline';
+                    }
+                    
+                    // Update last seen time
+                    if (data.last_seen) {
+                        document.getElementById('last-seen-container').style.display = 'block';
+                        document.getElementById('last-seen-time').innerText = `${formatTimestamp(data.last_seen)} (${timeAgo(data.last_seen)})`;
+                    }
+                    
+                    // Update post history
+                    const historyContainer = document.getElementById('post-history-container');
+                    if (data.post_history && data.post_history.length > 0) {
+                        historyContainer.className = '';
+                        historyContainer.innerHTML = '';
+                        
+                        data.post_history.forEach(post => {
+                            const postElement = document.createElement('div');
+                            postElement.className = 'post-item';
+                            
+                            let html = '';
+                            if (post.image_url) {
+                                html += `<img src="${post.image_url}" alt="Post thumbnail" class="post-thumbnail">`;
+                            }
+                            
+                            html += `<div class="post-info">`;
+                            if (post.caption) {
+                                html += `<div class="post-title">${post.caption.substring(0, 50)}${post.caption.length > 50 ? '...' : ''}</div>`;
+                            } else {
+                                html += `<div class="post-title">Post without caption</div>`;
+                            }
+                            
+                            if (post.source) {
+                                html += `<div class="post-source">Source: ${post.source}</div>`;
+                            }
+                            
+                            if (post.timestamp) {
+                                html += `<div class="post-time">${formatTimestamp(post.timestamp)}</div>`;
+                            }
+                            
+                            html += `</div>`;
+                            postElement.innerHTML = html;
+                            historyContainer.appendChild(postElement);
+                        });
+                    } else {
+                        historyContainer.innerHTML = '<p style="text-align: center; color: #666;">No post history available</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching status:', error);
+                    const statusIndicator = document.getElementById('status-indicator');
+                    const statusText = document.getElementById('status-text');
+                    statusIndicator.className = 'status-indicator offline';
+                    statusText.innerText = 'Error connecting to server';
+                });
+        }
+        
+        // Add event listeners to buttons
+        document.getElementById('btn-post-fact').addEventListener('click', function(e) {
+            e.preventDefault();
+            this.innerText = 'Posting...';
+            fetch('/api/test_post/fact')
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message || 'Post request sent successfully');
+                    this.innerText = 'Post Fact';
+                    // Update status after a short delay
+                    setTimeout(updateStatus, 2000);
+                })
+                .catch(error => {
+                    console.error('Error posting fact:', error);
+                    alert('Error sending post request');
+                    this.innerText = 'Post Fact';
+                });
+        });
+        
+        document.getElementById('btn-post-image').addEventListener('click', function(e) {
+            e.preventDefault();
+            this.innerText = 'Posting...';
+            fetch('/api/test_post/image')
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message || 'Post request sent successfully');
+                    this.innerText = 'Post Image';
+                    // Update status after a short delay
+                    setTimeout(updateStatus, 2000);
+                })
+                .catch(error => {
+                    console.error('Error posting image:', error);
+                    alert('Error sending post request');
+                    this.innerText = 'Post Image';
+                });
+        });
+        
+        document.getElementById('btn-post-reddit').addEventListener('click', function(e) {
+            e.preventDefault();
+            this.innerText = 'Posting...';
+            fetch('/api/test_post/reddit')
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message || 'Post request sent successfully');
+                    this.innerText = 'Post from Reddit';
+                    // Update status after a short delay
+                    setTimeout(updateStatus, 2000);
+                })
+                .catch(error => {
+                    console.error('Error posting from Reddit:', error);
+                    alert('Error sending post request');
+                    this.innerText = 'Post from Reddit';
+                });
+        });
+        
+        // Update status immediately and then every 10 seconds
+        updateStatus();
+        setInterval(updateStatus, 10000);
+    </script>
+</body>
+</html>
