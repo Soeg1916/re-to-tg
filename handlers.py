@@ -3,8 +3,9 @@ import os
 import tempfile
 import requests
 from telegram import Update, InputFile
-from config import DEFAULT_CHANNEL
+from config import DEFAULT_CHANNEL, TARGET_CHANNEL
 import sys
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -16,11 +17,13 @@ def send_post(context, content: dict):
         context: The context from the scheduler
         content: Dict containing 'image_url', 'caption', and 'source'
     """
+    import logging
+    logger = logging.getLogger('handlers')
     try:
-        # Use DEFAULT_CHANNEL from config as channel username
-        channel = DEFAULT_CHANNEL
+        # Use TARGET_CHANNEL from config as channel username (falls back to DEFAULT_CHANNEL if not set)
+        channel = TARGET_CHANNEL
         if not channel:
-            logger.error("No channel username provided for posting! Set TELEGRAM_CHANNEL_USERNAME in environment variables.")
+            logger.error("No channel username provided for posting! Set TARGET_CHANNEL in environment variables.")
             return
             
         # Make sure the channel name starts with @ if it doesn't already
@@ -77,14 +80,52 @@ def send_post(context, content: dict):
                 
                 logger.info(f"Image downloaded successfully to: {temp_file}")
                 
+                from PIL import Image
+                
+                # Check image dimensions and resize if needed
+                try:
+                    with Image.open(temp_file) as img:
+                        width, height = img.size
+                        logger.info(f"Image dimensions: {width}x{height}")
+                        
+                        # If image is very large or has unusual dimensions, resize it
+                        if width > 5000 or height > 5000 or width < 10 or height < 10:
+                            logger.info("Image has unusual dimensions, resizing...")
+                            # Calculate new dimensions
+                            max_size = 1280
+                            if width > height:
+                                new_width = min(width, max_size)
+                                new_height = int(height * (new_width / width))
+                            else:
+                                new_height = min(height, max_size)
+                                new_width = int(width * (new_height / height))
+                            
+                            # Resize image
+                            img = img.resize((new_width, new_height), Image.LANCZOS)
+                            img.save(temp_file)
+                            logger.info(f"Image resized to {new_width}x{new_height}")
+                except Exception as img_err:
+                    logger.error(f"Error processing image: {img_err}")
+                
                 # Send the image from the temporary file
-                with open(temp_file, 'rb') as photo_file:
+                try:
+                    with open(temp_file, 'rb') as photo_file:
+                        bot.send_photo(
+                            chat_id=channel,
+                            photo=InputFile(photo_file),
+                            caption=full_caption
+                        )
+                    logger.info(f"Successfully posted content to {channel}")
+                except Exception as send_err:
+                    logger.error(f"Error sending from file: {send_err}")
+                    # Fall back to direct URL
+                    logger.info("Falling back to direct URL due to send error...")
                     bot.send_photo(
                         chat_id=channel,
-                        photo=InputFile(photo_file),
+                        photo=image_url,
                         caption=full_caption
                     )
-                logger.info(f"Successfully posted content to {channel}")
+                    logger.info("Posted using direct URL instead")
                 
             except requests.exceptions.RequestException as req_err:
                 logger.error(f"Error downloading image: {req_err}")

@@ -37,7 +37,12 @@ def initialize_last_post_ids():
                     logger.info(f"Initialized tracking for r/{subreddit_name} with post ID: {post.id}")
                     break
             except Exception as e:
-                logger.error(f"Error initializing tracking for r/{subreddit_name}: {e}")
+                if "404" in str(e):
+                    logger.error(f"Error initializing tracking for r/{subreddit_name}: received 404 HTTP response")
+                    # Mark this subreddit as inactive but don't fail
+                    last_post_ids[subreddit_name] = None
+                else:
+                    logger.error(f"Error initializing tracking for r/{subreddit_name}: {e}")
     except Exception as e:
         logger.error(f"Error in initialize_last_post_ids: {e}")
 
@@ -222,7 +227,10 @@ def get_batch_posts(max_posts=5):
                                 break
                 
             except Exception as e:
-                logger.error(f"Error getting batch posts from r/{subreddit_name}: {e}")
+                if "404" in str(e):
+                    logger.error(f"Error getting batch posts from r/{subreddit_name}: received 404 HTTP response")
+                else:
+                    logger.error(f"Error getting batch posts from r/{subreddit_name}: {e}")
                 
     except Exception as e:
         logger.error(f"Error in get_batch_posts: {e}")
