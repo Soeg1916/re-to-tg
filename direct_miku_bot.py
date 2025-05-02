@@ -83,8 +83,9 @@ def start_command(update, context):
         f"Hello {username}! 👋\n\n"
         f"I'm Miku Bot, dedicated to sharing content about Nakano Miku from The Quintessential Quintuplets. "
         f"I post Miku facts, images, and content from Reddit automatically.\n\n"
-        f"Commands:\n"
+        f"Basic Commands:\n"
         f"/start - Show this welcome message\n"
+        f"/help - Show detailed help and instructions\n"
         f"/status - Check my current status\n"
         f"/fact - Get a random Miku fact\n"
         f"/image - Get a random Miku image\n"
@@ -94,6 +95,48 @@ def start_command(update, context):
     
     context.bot.send_message(chat_id=user_id, text=welcome_message)
     logger.info(f"Sent welcome message to user {user_id}")
+
+def help_command(update, context):
+    """
+    Handle the /help command.
+    Provides detailed instructions on how to use the bot.
+    """
+    user_id = update.effective_user.id
+    
+    help_message = (
+        "📚 *Miku Bot Help Guide* 📚\n\n"
+        "*Basic Commands:*\n"
+        "• `/start` - Welcome message and basic command list\n"
+        "• `/help` - Shows this detailed help message\n"
+        "• `/status` - Check bot status, posting intervals, and target channel\n"
+        "• `/fact` - Get a random Miku fact directly to your chat\n"
+        "• `/image` - Get a random Miku image directly to your chat\n\n"
+        
+        "*How This Bot Works:*\n"
+        "I automatically post Miku content to the configured channel on a regular schedule:\n"
+        "• Facts - Interesting tidbits about Nakano Miku\n"
+        "• Images - Beautiful artwork from various sources\n"
+        "• Reddit - Fresh content from Miku-related subreddits\n\n"
+        
+        "*For Channel Admins:*\n"
+        "If you're an admin of the channel, you can configure the bot:\n"
+        "• `/admin` - View all available admin commands\n"
+        "• `/addsubreddit [name]` - Add a subreddit to track\n"
+        "• `/removesubreddit [name]` - Remove a tracked subreddit\n"
+        "• `/setinterval [type] [minutes]` - Change posting frequency\n"
+        "• `/setchannel [@channel]` - Set where to post content\n"
+        "• `/forcepost [type]` - Post content immediately\n\n"
+        
+        "*Examples:*\n"
+        "• `/setinterval fact 15` - Set facts to post every 15 minutes\n"
+        "• `/addsubreddit MikuNakano` - Track the r/MikuNakano subreddit\n"
+        "• `/forcepost image` - Post a Miku image right now\n\n"
+        
+        "If you have any questions or need help, please contact the bot administrator."
+    )
+    
+    context.bot.send_message(chat_id=user_id, text=help_message, parse_mode='Markdown')
+    logger.info(f"Sent help message to user {user_id}")
 
 def status_command(update, context):
     """
@@ -585,6 +628,7 @@ def setup_and_run_bot():
         
         # Register command handlers
         dispatcher.add_handler(CommandHandler("start", start_command))
+        dispatcher.add_handler(CommandHandler("help", help_command))
         dispatcher.add_handler(CommandHandler("status", status_command))
         dispatcher.add_handler(CommandHandler("fact", fact_command))
         dispatcher.add_handler(CommandHandler("image", image_command))
