@@ -35,3 +35,7 @@ MIKU_SUBREDDITS = SUBREDDITS
 WAIFU_PICS_API = "https://api.waifu.pics/sfw/waifu"
 WAIFU_IM_API = "https://api.waifu.im/search/?included_tags=maid&included_tags=raiden-shogun&included_tags=oppai&is_nsfw=false"
 SAFEBOORU_API = "https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&limit=100&tags=nakano_miku"
+ANIME_PICS_API = "https://api.waifu.pics/sfw/megumin"
+
+# History tracking
+HISTORY_FILE = "post_history.json"
