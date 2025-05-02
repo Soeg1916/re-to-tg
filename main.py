@@ -5,7 +5,6 @@ This script detects which workflow is running and routes execution appropriately
 """
 import os
 import sys
-import socket
 
 # Check if we're in a Replit workflow
 workflow = os.environ.get('REPL_WORKFLOW', '')
@@ -22,34 +21,22 @@ if len(sys.argv) > 0 and 'gunicorn' in sys.argv[0] or 'gunicorn' in ' '.join(sys
 
 # CRITICAL PATH: If we're in the run_miku_bot workflow, use a dedicated bot runner
 if workflow == 'run_miku_bot':
-    print("=============================================")
+    print("=" * 60)
     print("✅ MIKU BOT WORKFLOW DETECTED")
-    print("Redirecting to direct bot runner...")
-    print("=============================================")
+    print("✅ EXECUTING STANDALONE BOT SCRIPT")
+    print("=" * 60)
     
-    # Clean up existing lock files to prevent "Bot running" errors
-    for file_path in ['/tmp/bot_running.txt', '/tmp/web_interface_running.txt', '/tmp/bot_failed.txt']:
-        if os.path.exists(file_path):
-            print(f"Removing lock file: {file_path}")
-            os.remove(file_path)
-    
-    # Create a new process for the bot runner
-    import subprocess
-    
-    # Use subprocess to run the bot in a separate process
-    try:
-        print("Starting standalone bot via main_run_bot.py...")
-        subprocess.Popen(['python', 'main_run_bot.py'])
-        print("Bot process started, exiting main process")
-        sys.exit(0)  # Exit cleanly without running Flask
-    except Exception as e:
-        print(f"Error starting bot process: {e}")
-        with open('/tmp/bot_failed.txt', 'w') as f:
-            f.write(str(e))
-        sys.exit(1)
+    # Execute the standalone bot script that has no Flask dependencies
+    import main_run_bot
+    # This should never return
+    sys.exit(0)
+
+print("GUNICORN NOT DETECTED AND NOT IN run_miku_bot WORKFLOW")
+print("No action taken in main.py")
 
 # Function to check if a port is in use
 def is_port_in_use(port):
+    import socket
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(('localhost', port)) == 0
 

@@ -24,9 +24,9 @@ SAFEBOORU_API = "https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1
 
 # Scheduling intervals (in seconds)
 # These can be customized via environment variables
-MAIN_POST_INTERVAL = int(os.getenv("MAIN_POST_INTERVAL", 10)) * 60  # Default: Every 10 minutes
-IMAGE_POST_INTERVAL = int(os.getenv("IMAGE_POST_INTERVAL", 15)) * 60  # Default: Every 15 minutes
-REDDIT_POST_INTERVAL = int(os.getenv("REDDIT_POST_INTERVAL", 60)) * 60  # Default: Every hour
+MAIN_POST_INTERVAL = int(os.getenv("MAIN_POST_INTERVAL", 10)) * 60  # Every 10 minutes for photo+text posts
+IMAGE_POST_INTERVAL = int(os.getenv("IMAGE_POST_INTERVAL", 10)) * 60  # Every 10 minutes for regular image posts
+REDDIT_POST_INTERVAL = int(os.getenv("REDDIT_POST_INTERVAL", 2)) * 60  # Every 2 minutes for Reddit posts
 
 # Paths for data storage
 HISTORY_FILE = "post_history.json"

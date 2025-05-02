@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-A completely standalone script for the run_miku_bot workflow.
-This script runs the bot without any web interface or Flask dependencies.
+100% STANDALONE BOT SCRIPT - NO FLASK IMPORTS WHATSOEVER
+This script is designed to be run directly with no dependencies on Flask or web interfaces.
 """
 import os
-import sys
 import time
 import logging
 import traceback
@@ -94,16 +93,23 @@ def setup_and_run_bot():
             f.write(error_message)
 
 if __name__ == '__main__':
-    # Remove any existing lock files
-    for file_path in ['/tmp/bot_running.txt', '/tmp/bot_failed.txt']:
-        if os.path.exists(file_path):
-            os.remove(file_path)
-    
-    # Print a banner to show we're using the direct script
-    print("=" * 60)
-    print("STANDALONE MIKU BOT EXECUTION")
-    print("No Flask or web server dependencies")
-    print("=" * 60)
-    
-    # Start the bot
-    setup_and_run_bot()
+    try:
+        # Remove any existing lock files
+        for file_path in ['/tmp/bot_running.txt', '/tmp/bot_failed.txt']:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        
+        # Print a banner to show we're using the direct script
+        print("=" * 60)
+        print("DIRECT BOT EXECUTION - 100% STANDALONE MODE")
+        print("No web interface or Flask dependencies")
+        print("=" * 60)
+        
+        # Start the bot
+        setup_and_run_bot()
+        
+    except Exception as e:
+        error_message = f"Critical error in direct_bot_only.py: {e}\n{traceback.format_exc()}"
+        print(error_message)
+        with open('/tmp/bot_failed.txt', 'w') as f:
+            f.write(error_message)

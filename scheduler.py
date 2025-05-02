@@ -186,17 +186,17 @@ def setup_scheduler(updater: Updater):
         first=IMAGE_POST_INTERVAL // 2  # Start halfway between main posts
     )
     
-    # Schedule Reddit batch posts every 10 minutes
+    # Schedule Reddit batch posts every 2 minutes
     job_queue.run_repeating(
         post_reddit_miku,
-        interval=600,  # 10 minutes in seconds
+        interval=REDDIT_POST_INTERVAL,  # 2 minutes in seconds (from config)
         first=60  # Start after 1 minute
     )
     
-    # Schedule frequent checks for new Reddit posts (every 2 minutes)
+    # Schedule frequent checks for new Reddit posts (every minute)
     job_queue.run_repeating(
         check_new_reddit_posts,
-        interval=120,  # 2 minutes in seconds
+        interval=60,  # 1 minute in seconds
         first=30  # Start after 30 seconds
     )
     
