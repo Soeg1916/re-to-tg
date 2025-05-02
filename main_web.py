@@ -8,38 +8,36 @@ import sys
 import logging
 import socket
 
-# CRITICAL: Check environment before importing Flask
-# This ensures we don't cause port conflicts
+# CRITICAL: Immediate workflow check at the top
 workflow = os.environ.get('REPL_WORKFLOW', '')
-print(f"WORKFLOW: {workflow}")
+print(f"Detected workflow: {workflow}")
 
-# Use a flag to determine if we want bot-only mode
-bot_only_mode = (
-    workflow == 'run_miku_bot' or  # Check workflow name
-    os.environ.get('MIKU_BOT_ONLY') == 'true' or  # Check environment variable
-    (len(sys.argv) > 1 and sys.argv[1] == 'bot_only')  # Check command line arg
-)
-
-# If we're in bot-only mode, run the standalone bot
-if bot_only_mode:
+# For the run_miku_bot workflow, immediately run the stand-alone bot
+if workflow == 'run_miku_bot':
+    # The key is to use a direct system call instead of importing,
+    # which avoids any issues with module conflicts
+    print("=================================================")
+    print("CRITICAL: Detected run_miku_bot workflow")
+    print("IMMEDIATELY executing run_bot.py in a separate process")
+    print("=================================================")
+    
+    # Execute the bot in a separate process and exit early
+    import subprocess
+    
+    # This is critical to avoid any port conflicts
     try:
-        # Try to run the specialized bot runner
-        print("========================================")
-        print("Bot-only mode detected! Running standalone bot...")
-        print("This completely avoids Flask and port conflicts")
-        print("========================================")
-        # Use the separate script to run the bot
-        os.system("python bot_runner.py")
+        print("Starting bot in standalone mode...")
+        subprocess.run([sys.executable, "run_bot.py"], check=True)
         sys.exit(0)
     except Exception as e:
-        print(f"Error running standalone bot: {e}")
         import traceback
+        print(f"Error running bot: {e}")
         traceback.print_exc()
         
-        # Keep the process alive on error
+        # Keep the process alive even on error
         import time
         while True:
-            print("Error running bot. Waiting for manual intervention...")
+            print("Waiting for manual intervention...")
             time.sleep(60)
 
 # Function to check if a port is in use
@@ -48,9 +46,9 @@ def is_port_in_use(port):
         return s.connect_ex(('localhost', port)) == 0
 
 # Continue with normal imports for combined mode
+from bot import setup_bot
 from flask import Flask, render_template, jsonify
 import threading
-from bot import setup_bot
 
 # Set up logging
 logging.basicConfig(
@@ -183,24 +181,17 @@ def test_post(post_type):
         
     # Try to send the post
     try:
-        # Ensure content is not None before sending
-        if content:
-            send_post(context, content)
-            return jsonify({
-                "success": True,
-                "message": f"{post_type.capitalize()} post sent successfully!",
-                "post": {
-                    "type": post_type,
-                    "image_url": content.get("image_url", ""),
-                    "source": content.get("source", ""),
-                    "caption_preview": content.get("caption", "")[:30] + "..." if len(content.get("caption", "")) > 30 else content.get("caption", "")
-                }
-            })
-        else:
-            return jsonify({
-                "success": False,
-                "message": "Failed to prepare content for posting"
-            }), 500
+        send_post(context, content)
+        return jsonify({
+            "success": True,
+            "message": f"{post_type.capitalize()} post sent successfully!",
+            "post": {
+                "type": post_type,
+                "image_url": content.get("image_url", ""),
+                "source": content.get("source", ""),
+                "caption_preview": content.get("caption", "")[:30] + "..." if len(content.get("caption", "")) > 30 else content.get("caption", "")
+            }
+        })
     except Exception as e:
         return jsonify({
             "success": False,
@@ -222,16 +213,49 @@ def main():
     # Get the current workflow name from environment variable
     current_workflow = os.environ.get('REPL_WORKFLOW', '')
     
-    # Normal mode: start both the bot thread and Flask app
-    print("Starting in COMBINED mode (web interface + bot)...")
+    # FORCE STANDALONE MODE when in run_miku_bot workflow to avoid port conflicts
+    if current_workflow == 'run_miku_bot':
+        print("=========================================")
+        print("CRITICAL: Detected run_miku_bot workflow")
+        print("FORCING BOT to run in standalone mode...")
+        print("This prevents port conflicts with other workflows")
+        print("=========================================")
+        
+        # Directly import and run the standalone bot without any Flask components
+        try:
+            import standalone_bot
+            standalone_bot.run_standalone()
+        except Exception as e:
+            import traceback
+            print(f"ERROR running standalone bot: {e}")
+            traceback.print_exc()
+            # Sleep to keep the process alive even if there's an error
+            import time
+            while True:
+                print("Attempting to recover from error...")
+                time.sleep(60)
+        return
     
-    # Start the bot in a separate thread
-    bot_thread = threading.Thread(target=start_bot_thread)
-    bot_thread.daemon = True
-    bot_thread.start()
+    # If explicitly asked to run bot_only from command line arg
+    elif len(sys.argv) > 1 and sys.argv[1] == 'bot_only':
+        print("Starting Miku bot in standalone mode via command line argument...")
+        
+        # Import and run the completely standalone bot script
+        import standalone_bot
+        standalone_bot.run_standalone()
+        return
     
-    # Run the Flask app
-    app.run(host='0.0.0.0', port=5000)
+    else:
+        # Normal mode: start both the bot thread and Flask app
+        print("Starting in COMBINED mode (web interface + bot)...")
+        
+        # Start the bot in a separate thread
+        bot_thread = threading.Thread(target=start_bot_thread)
+        bot_thread.daemon = True
+        bot_thread.start()
+        
+        # Run the Flask app
+        app.run(host='0.0.0.0', port=5000)
 
 # Only start the bot when running directly, not when imported by gunicorn
 if __name__ == '__main__':

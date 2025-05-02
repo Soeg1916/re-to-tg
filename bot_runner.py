@@ -1,9 +1,11 @@
+"""
+Special script specifically designed for the run_miku_bot workflow.
+This ensures the bot runs in standalone mode without Flask to avoid port conflicts.
+"""
+import os
+import sys
 import logging
 import time
-from bot import setup_bot
-from scheduler import setup_scheduler
-from api_clients import initialize_reddit_client
-from telegram.ext import Updater
 
 # Set up logging
 logging.basicConfig(
@@ -11,34 +13,49 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-def run_standalone_bot():
-    """Run the bot in standalone mode without the Flask web interface"""
-    logging.info("Starting Miku bot in standalone mode...")
+logger = logging.getLogger(__name__)
+
+def main():
+    """
+    Entry point for the run_miku_bot workflow.
+    Force standalone mode to avoid port conflicts.
+    """
+    print("=================================================")
+    print("DEDICATED WORKFLOW RUNNER FOR MIKU BOT")
+    print("Completely bypassing Flask to avoid port conflicts")
+    print("=================================================")
     
-    # Initialize Reddit client if credentials are available
-    initialize_reddit_client()
-    
-    # Create and configure the bot
-    # Start the bot and save the updater
-    updater = setup_bot()
-    
-    logging.info("Bot is running. Press Ctrl+C to stop.")
-    
-    # Keep the script running
     try:
-        # If we have an updater, use idle to properly handle signals
+        # Directly import and use only the essential components for the bot
+        from bot import setup_bot
+        from api_clients import initialize_reddit_client
+        
+        # Initialize Reddit client
+        reddit = initialize_reddit_client()
+        print("Reddit client initialized" if reddit else "Reddit client initialization failed")
+        
+        # Set up and start the bot
+        updater = setup_bot()
+        
         if updater:
+            print("Bot started successfully! Running in standalone mode.")
+            # Keep the bot running
             updater.idle()
         else:
-            # Fallback if updater wasn't properly initialized
+            print("Failed to start bot. Check your TELEGRAM_BOT_TOKEN.")
+            # Keep the process alive
             while True:
-                time.sleep(1)
-    except KeyboardInterrupt:
-        logging.info("Bot is shutting down...")
-        if updater:
-            updater.stop()
+                print("Waiting for configuration...")
+                time.sleep(60)
     except Exception as e:
-        logging.error(f"Error in bot runner: {e}")
+        logger.error(f"Error running bot: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Keep the process alive even after an error
+        while True:
+            logger.error("Error in bot execution. Waiting 60 seconds...")
+            time.sleep(60)
 
-if __name__ == '__main__':
-    run_standalone_bot()
+if __name__ == "__main__":
+    main()
