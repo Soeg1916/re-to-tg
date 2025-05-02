@@ -8,55 +8,95 @@ import sys
 import logging
 import socket
 
-# CRITICAL: Check environment before importing Flask
-# This ensures we don't cause port conflicts
+# Set up logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
+# CRITICAL: Check if we're in the run_miku_bot workflow BEFORE importing Flask
+import sys, subprocess
+
+# Get the workflow name from environment
 workflow = os.environ.get('REPL_WORKFLOW', '')
 print(f"WORKFLOW: {workflow}")
 
-# Use a flag to determine if we want bot-only mode
-bot_only_mode = (
-    workflow == 'run_miku_bot' or  # Check workflow name
-    os.environ.get('MIKU_BOT_ONLY') == 'true' or  # Check environment variable
-    (len(sys.argv) > 1 and sys.argv[1] == 'bot_only')  # Check command line arg
-)
+# Force environment check in case REPL_WORKFLOW isn't set correctly
+workflow_forced = False
 
-# If we're in bot-only mode, run the standalone bot
-if bot_only_mode:
-    try:
-        # Try to run the specialized bot runner
-        print("========================================")
-        print("Bot-only mode detected! Running standalone bot...")
-        print("This completely avoids Flask and port conflicts")
-        print("========================================")
-        # Use the separate script to run the bot
-        os.system("python bot_runner.py")
-        sys.exit(0)
-    except Exception as e:
-        print(f"Error running standalone bot: {e}")
-        import traceback
-        traceback.print_exc()
-        
-        # Keep the process alive on error
-        import time
-        while True:
-            print("Error running bot. Waiting for manual intervention...")
-            time.sleep(60)
+# Check if we're called by the run_miku_bot workflow
+if os.path.exists('/tmp/workflow_name.txt'):
+    with open('/tmp/workflow_name.txt', 'r') as f:
+        stored_workflow = f.read().strip()
+        if stored_workflow == 'run_miku_bot':
+            workflow = 'run_miku_bot'
+            workflow_forced = True
+            print("FORCED WORKFLOW DETECTION: run_miku_bot (from file)")
+else:
+    # Create a file with our workflow name for future runs
+    with open('/tmp/workflow_name.txt', 'w') as f:
+        f.write(workflow)
 
-# Function to check if a port is in use
+# Manual override check - detect if port 5000 is already in use
+import socket
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(('localhost', port)) == 0
+
+# If port 5000 is in use and we're not already forcing the workflow,
+# assume we're in the secondary workflow
+if is_port_in_use(5000) and not workflow_forced:
+    workflow = 'run_miku_bot'
+    print("FORCED WORKFLOW DETECTION: run_miku_bot (port 5000 in use)")
+
+# Detect if we're in the bot-only workflow
+if workflow == 'run_miku_bot':
+    print("=============================================")
+    print("✅ MIKU BOT STANDALONE MODE ACTIVATED!")
+    print("This will run WITHOUT Flask to avoid port conflicts")
+    print("=============================================")
+    
+    try:
+        # Only import what we need for the bot, skip Flask entirely
+        from api_clients import initialize_reddit_client
+        from bot import setup_bot
+        
+        # Initialize Reddit client
+        reddit = initialize_reddit_client()
+        
+        # Set up and start the bot
+        updater = setup_bot()
+        
+        if updater:
+            print("Bot started successfully!")
+            # Keep the bot running
+            updater.idle()
+        else:
+            print("Failed to start bot. Check your TELEGRAM_BOT_TOKEN.")
+            
+    except Exception as e:
+        print(f"Error starting bot: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Keep the process alive even on error
+        import time
+        while True:
+            print("Error running bot. Waiting 60 seconds...")
+            time.sleep(60)
+            
+    # Exit early to avoid importing Flask
+    sys.exit(0)
 
 # Continue with normal imports for combined mode
 from flask import Flask, render_template, jsonify
 import threading
 from bot import setup_bot
 
-# Set up logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+# Function to check if a port is in use
+def is_port_in_use(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) == 0
 
 # Create Flask app
 app = Flask(__name__)
@@ -219,9 +259,6 @@ def start_bot_thread():
 
 # Handle the startup differently based on workflow
 def main():
-    # Get the current workflow name from environment variable
-    current_workflow = os.environ.get('REPL_WORKFLOW', '')
-    
     # Normal mode: start both the bot thread and Flask app
     print("Starting in COMBINED mode (web interface + bot)...")
     
