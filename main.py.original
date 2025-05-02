@@ -33,20 +33,10 @@ if workflow == 'run_miku_bot':
             print(f"Removing lock file: {file_path}")
             os.remove(file_path)
     
-    # Create a new process for the bot runner
-    import subprocess
-    
-    # Use subprocess to run the bot in a separate process
-    try:
-        print("Starting standalone bot via main_run_bot.py...")
-        subprocess.Popen(['python', 'main_run_bot.py'])
-        print("Bot process started, exiting main process")
-        sys.exit(0)  # Exit cleanly without running Flask
-    except Exception as e:
-        print(f"Error starting bot process: {e}")
-        with open('/tmp/bot_failed.txt', 'w') as f:
-            f.write(str(e))
-        sys.exit(1)
+    # Execute our direct bot runner
+    os.execvp('python', ['python', 'direct_bot_runner.py'])
+    # This line will never be reached since execvp replaces the current process
+    sys.exit(0)
 
 # Function to check if a port is in use
 def is_port_in_use(port):

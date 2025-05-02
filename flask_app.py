@@ -6,7 +6,6 @@ It completely skips the bot to avoid conflicts with the run_miku_bot workflow.
 import os
 import time
 import logging
-import socket
 from flask import Flask, render_template, jsonify
 
 # Set up logging
@@ -15,14 +14,20 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# Create Flask app
+logger = logging.getLogger(__name__)
+
+# Create and configure the Flask app
 app = Flask(__name__)
 
 # Add start time for uptime tracking
 app.config['START_TIME'] = time.time()
 
-# Mark that the bot is handled by another instance
-with open('/tmp/bot_instance_running.txt', 'w') as f:
+# Signal that we're running the web-only version
+print("✅ FLASK-ONLY MODE: Running web interface without the bot")
+print("The bot should be running in the run_miku_bot workflow")
+
+# Write a file to indicate the web interface is running
+with open('/tmp/web_interface_running.txt', 'w') as f:
     f.write('1')
 
 @app.route('/')
@@ -33,8 +38,6 @@ def index():
 @app.route('/status')
 def status():
     """API endpoint to check bot status"""
-    import os
-    import time
     from config import DEFAULT_CHANNEL, MAIN_POST_INTERVAL, IMAGE_POST_INTERVAL, REDDIT_POST_INTERVAL
     
     channel = DEFAULT_CHANNEL
@@ -44,10 +47,13 @@ def status():
     # Current uptime in seconds
     uptime = int(time.time() - app.config.get('START_TIME', time.time()))
     
+    # Check if the bot is running
+    bot_running = os.path.exists('/tmp/bot_running.txt')
+    
     return jsonify({
         "status": "web_only",
         "bot_name": "Nakano Miku Bot",
-        "version": "1.0.0",
+        "version": "1.0.1",
         "channel": channel,
         "uptime_seconds": uptime,
         "uptime_human": f"{uptime // 86400}d {(uptime % 86400) // 3600}h {(uptime % 3600) // 60}m {uptime % 60}s",
@@ -57,25 +63,31 @@ def status():
             "reddit_interval_minutes": REDDIT_POST_INTERVAL // 60
         },
         "reddit_enabled": bool(os.getenv("REDDIT_CLIENT_ID") and os.getenv("REDDIT_CLIENT_SECRET")),
-        "keepalive": True,
-        "bot_instance_mode": "Web dashboard only - Bot is running in a separate workflow"
+        "bot_running": bot_running,
+        "mode": "Web Interface Only (Bot running in separate workflow)",
+        "note": "Test posting is only available in the run_miku_bot workflow",
+        "keepalive": True
     })
-    
+
 @app.route('/api/test/post/<post_type>', methods=['GET'])
 def test_post(post_type):
     """API endpoint to manually trigger different types of posts"""
-    # In web-only mode, redirect to the status page and explain what's happening
+    # Validate post type
+    valid_types = ['fact', 'image', 'reddit']
+    if post_type not in valid_types:
+        return jsonify({
+            "success": False,
+            "message": f"Invalid post type. Must be one of: {', '.join(valid_types)}"
+        }), 400
+    
     return jsonify({
         "success": False,
-        "message": "This is a web-only instance. The bot is running in the run_miku_bot workflow.",
-        "note": "Test posts can only be triggered from the workflow running the bot instance."
+        "message": "This is a web-only instance. The bot is running in a separate workflow.",
+        "instructions": "To test post functionality, go to the run_miku_bot workflow",
+        "status": "The web dashboard does not have the ability to trigger posts"
     }), 503
 
-# Keeping the original endpoint for backward compatibility
 @app.route('/api/test/reddit-post', methods=['GET'])
 def test_reddit_post():
     """Redirect to the new endpoint structure for Reddit posts"""
     return test_post('reddit')
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)

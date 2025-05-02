@@ -1,6 +1,7 @@
 """
-Web-only app for Gunicorn to use.
-This file contains only the Flask application without any bot functionality.
+Web-only interface for Miku Bot Dashboard.
+This file is used by gunicorn in the Start application workflow.
+It contains NO bot functionality to avoid conflicts with the run_miku_bot workflow.
 """
 import os
 import time
@@ -15,11 +16,19 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# Notify that we're running the web-only version
+print("✅ RUNNING WEB-ONLY VERSION - NO BOT FUNCTIONALITY")
+print("Bot is running in the run_miku_bot workflow")
+
 # Create Flask app
 app = Flask(__name__)
 
 # Add start time for uptime tracking
 app.config['START_TIME'] = time.time()
+
+# Write a file to indicate the web interface is running
+with open('/tmp/web_interface_running.txt', 'w') as f:
+    f.write('1')
 
 @app.route('/')
 def index():
@@ -38,10 +47,13 @@ def status():
     # Current uptime in seconds
     uptime = int(time.time() - app.config.get('START_TIME', time.time()))
     
+    # Check if the bot is running
+    bot_running = os.path.exists('/tmp/bot_running.txt')
+    
     return jsonify({
-        "status": "running",
+        "status": "web_only",
         "bot_name": "Nakano Miku Bot",
-        "version": "1.0.0",
+        "version": "1.0.1",
         "channel": channel,
         "uptime_seconds": uptime,
         "uptime_human": f"{uptime // 86400}d {(uptime % 86400) // 3600}h {(uptime % 3600) // 60}m {uptime % 60}s",
@@ -51,17 +63,22 @@ def status():
             "reddit_interval_minutes": REDDIT_POST_INTERVAL // 60
         },
         "reddit_enabled": bool(os.getenv("REDDIT_CLIENT_ID") and os.getenv("REDDIT_CLIENT_SECRET")),
+        "bot_running": bot_running,
         "mode": "Web Interface Only (Bot running in separate workflow)",
+        "note": "Test posting is only available when manually running the bot",
         "keepalive": True
     })
 
 @app.route('/api/test/post/<post_type>', methods=['GET'])
 def test_post(post_type):
     """API endpoint to manually trigger different types of posts"""
+    # Return a descriptive message explaining that this is web-only mode
     return jsonify({
         "success": False,
-        "message": "This instance is running as web interface only. The bot is running in a separate workflow."
-    }), 400
+        "message": "This is a web-only instance. The bot is running in a separate workflow.",
+        "instructions": "To test post functionality, go to the run_miku_bot workflow",
+        "status": "The web dashboard does not have the ability to trigger posts"
+    }), 503
 
 @app.route('/api/test/reddit-post', methods=['GET'])
 def test_reddit_post():

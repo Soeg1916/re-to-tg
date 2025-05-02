@@ -1,51 +1,25 @@
+#!/usr/bin/env python3
 """
 Start only the Miku bot in standalone mode. 
 This script is designed to be run by the run_miku_bot workflow.
 It ONLY starts the bot without any web interface to avoid port conflicts.
 """
-import os
+
+# This file is the entry point for the "run_miku_bot" workflow
+# It should be invoked directly by the workflow
+
 import sys
-import time
-import logging
+import os
 
-# Configure logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-
-logger = logging.getLogger(__name__)
-
-print("========================================================")
-print("✅ MIKU BOT RUNNER DETECTED - STANDALONE MODE ACTIVATED")
-print("This script runs the bot WITHOUT the web interface")
-print("to avoid port conflicts with the main application.")
-print("========================================================")
-
-try:
-    # Import only what's needed for the bot, completely skipping Flask
-    from api_clients import initialize_reddit_client
-    from bot import setup_bot
+if __name__ == "__main__":
+    print("=============================================")
+    print("✅ MIKU BOT RUNNER - WORKFLOW ENTRY POINT")
+    print("This script will launch the bot-only module")
+    print("=============================================")
     
-    # Initialize Reddit client
-    reddit = initialize_reddit_client()
-    
-    # Set up and start the bot
-    updater = setup_bot()
-    
-    if updater:
-        print("Bot started successfully!")
-        # Keep the bot running
-        updater.idle()
+    # Run the dedicated standalone bot script
+    if os.path.exists('run_bot_workflow.py'):
+        os.execvp('python', ['python', 'run_bot_workflow.py'])
     else:
-        print("Failed to start bot. Check your TELEGRAM_BOT_TOKEN.")
-        
-except Exception as e:
-    logger.error(f"Error starting bot: {e}")
-    import traceback
-    traceback.print_exc()
-    
-    # Keep the process alive even after an error
-    while True:
-        logger.error("Error in bot execution. Waiting 60 seconds before retry...")
-        time.sleep(60)
+        print("ERROR: run_bot_workflow.py not found")
+        sys.exit(1)

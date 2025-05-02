@@ -1,6 +1,6 @@
 """
-Dedicated script for running ONLY the Miku bot in the run_miku_bot workflow.
-This completely skips the Flask app to avoid port conflicts.
+Special script to run ONLY the Miku bot without Flask.
+This script is specifically designed for the run_miku_bot workflow.
 """
 import os
 import sys
@@ -14,20 +14,13 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-def main():
-    """Run the bot in standalone mode, completely bypassing Flask"""
+if __name__ == "__main__":
     print("=============================================")
     print("✅ MIKU BOT STANDALONE MODE ACTIVATED!")
     print("This will run WITHOUT Flask to avoid port conflicts")
     print("=============================================")
     
-    # Check if there's already a bot running
-    if os.path.exists('/tmp/bot_running.txt'):
-        logger.warning("Bot is already running in another process!")
-        logger.warning("Exiting to avoid conflicts...")
-        sys.exit(1)
-    
-    # Create a file to indicate the bot is running
+    # Mark that we're running the bot
     with open('/tmp/bot_running.txt', 'w') as f:
         f.write('1')
     
@@ -67,6 +60,3 @@ def main():
         # Clean up our marker file when the bot exits
         if os.path.exists('/tmp/bot_running.txt'):
             os.remove('/tmp/bot_running.txt')
-
-if __name__ == "__main__":
-    main()
