@@ -29,19 +29,42 @@ def main():
     
     # Check if port 5000 is already in use (likely by the web app)
     if is_port_in_use(5000):
-        print("Port 5000 is already in use")
-        print("Launching web dashboard on port 8080 instead...")
+        # Import necessary modules at runtime to avoid circular imports
+        import time
+        from flask import Flask, redirect
         
-        try:
-            # Import and run the web dashboard on a different port
-            import time
-            import web_dashboard
-            web_dashboard.app.run(host='0.0.0.0', port=8080)
-        except ImportError:
-            print("Web dashboard not available. Running in monitor mode...")
-            while True:
-                print("Monitoring... Bot is running in another workflow.")
-                time.sleep(30)
+        print("Port 5000 is already in use")
+        print("Starting simple redirect server on port 8080...")
+        
+        # Create a super simple Flask app just for redirecting
+        redirect_app = Flask(__name__)
+        
+        @redirect_app.route('/')
+        def home():
+            return redirect('/status')
+            
+        @redirect_app.route('/status')
+        def status():
+            return f"""
+            <html>
+            <head>
+                <meta http-equiv="refresh" content="0;url=http://localhost:5000/status">
+                <title>Redirecting to Miku Bot Dashboard</title>
+            </head>
+            <body>
+                <h1>Redirecting to the Miku Bot Dashboard...</h1>
+                <p>If you are not redirected, <a href="http://localhost:5000/status">click here</a>.</p>
+                <script>
+                    window.location.href = window.location.origin.replace(':8080', ':5000') + '/status';
+                </script>
+            </body>
+            </html>
+            """
+            
+        # Run the redirect app
+        redirect_app.run(host='0.0.0.0', port=8080)
+                
+    # If this else statement is reached, there would be monitor code here
     else:
         print("Port 5000 is available, but still using standalone mode for consistency...")
         
