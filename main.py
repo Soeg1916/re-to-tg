@@ -9,25 +9,101 @@ import sys
 # Check if we're in a Replit workflow
 workflow = os.environ.get('REPL_WORKFLOW', '')
 
+# Additional detection for run_miku_bot workflow
+# Look for our special marker file
+if os.path.exists('.run_miku_bot'):
+    print("✅ DETECTED .run_miku_bot MARKER FILE")
+    workflow = 'run_miku_bot'
+    os.environ['REPL_WORKFLOW'] = 'run_miku_bot'
+
 print(f"WORKFLOW: {workflow}")
 
 # CRITICAL PATH: If we're running in Gunicorn, use the web-only interface
 if len(sys.argv) > 0 and 'gunicorn' in sys.argv[0] or 'gunicorn' in ' '.join(sys.argv):
     print("✅ GUNICORN DETECTED - IMPORTING WEB-ONLY MODULE")
     # Only the app object should be exported for gunicorn
-    from web_only import app
+    
+    # Try all available web modules in order of preference
+    web_modules = [
+        'gunicorn_runner',  # Our most optimized dedicated runner
+        'flask_app',        # Dedicated Flask app module
+        'web_only'          # Basic web-only fallback
+    ]
+    
+    for module_name in web_modules:
+        try:
+            module = __import__(module_name)
+            app = module.app
+            print(f"✅ LOADED {module_name.upper()} MODULE")
+            break
+        except (ImportError, AttributeError) as e:
+            print(f"❌ Failed to load {module_name}: {e}")
+    else:
+        # If we get here, all imports failed
+        # Create a minimal Flask app as last resort
+        from flask import Flask
+        app = Flask(__name__)
+        @app.route('/')
+        def index():
+            return "Miku Bot Web Interface - All modules failed to load"
+        print("⚠️ CREATED MINIMAL EMERGENCY WEB INTERFACE")
+        
     print("✅ LOADING WEB-ONLY VERSION - NO BOT FUNCTIONALITY")
     sys.exit(0)  # Doesn't actually exit; just stops rest of the code
 
-# CRITICAL PATH: If we're in the run_miku_bot workflow, use a dedicated bot runner
+# CRITICAL PATH: If we're in the run_miku_bot workflow, use our direct script
 if workflow == 'run_miku_bot':
     print("=" * 60)
     print("✅ MIKU BOT WORKFLOW DETECTED")
-    print("✅ EXECUTING STANDALONE BOT SCRIPT")
+    print("✅ EXECUTING DIRECT SCRIPT WITH 3-MINUTE REDDIT POSTS")
     print("=" * 60)
     
-    # Execute the standalone bot script that has no Flask dependencies
-    import main_run_bot
+    import os
+    import subprocess
+    import time
+    
+    # First, kill any competing processes to avoid port conflicts
+    print("Killing any competing processes...")
+    subprocess.run("pkill -f 'python.*flask'", shell=True)
+    subprocess.run("pkill -f 'python.*5000'", shell=True)
+    time.sleep(1)
+    
+    # Use our newest direct runner script
+    direct_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "run_miku_bot_direct.py")
+    
+    if os.path.exists(direct_path):
+        print(f"Running direct runner: {direct_path}")
+        # Make sure it's executable
+        try:
+            subprocess.run(['chmod', '+x', direct_path], check=True)
+        except Exception as e:
+            print(f"Warning: Could not make script executable: {e}")
+            
+        # Use execl to completely replace this process, avoiding any port conflicts
+        os.execl(sys.executable, sys.executable, direct_path)
+    else:
+        print(f"Error: Direct runner not found: {direct_path}")
+        
+        # Try other scripts as fallbacks in order of preference
+        fallbacks = [
+            "direct_miku_bot.py",  # Most direct approach
+            "final_miku_solution.py",  # Complex but comprehensive solution
+            "direct_run_bot.sh",   # Shell script approach
+            "run_standalone_bot.sh" # Final fallback
+        ]
+        
+        for script in fallbacks:
+            script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), script)
+            if os.path.exists(script_path):
+                print(f"Using fallback script: {script_path}")
+                if script.endswith('.sh'):
+                    os.execl('/bin/bash', 'bash', script_path)
+                else:
+                    os.execl(sys.executable, sys.executable, script_path)
+                break
+        else:
+            print(f"Critical error: No bot scripts found")
+    
     # This should never return
     sys.exit(0)
 

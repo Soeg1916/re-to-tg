@@ -1,16 +1,19 @@
+#!/usr/bin/env python3
 """
-Flask application for the Miku Bot Dashboard.
-This is a special file recognized by Replit.
+Standalone web dashboard for Miku Bot with zero external dependencies.
+This script runs a simple Flask application on port 5000 to display the status of the bot.
 """
 
 import os
+import sys
 import time
-from flask import Flask, render_template, jsonify, redirect, url_for
+import json
+from flask import Flask, render_template, jsonify, request
 
 # Create Flask app
 app = Flask(__name__)
 
-# Simple configuration
+# Simple configuration - everything in one file
 BOT_RUNNING_FILE = '/tmp/bot_running.txt'
 WEB_RUNNING_FILE = '/tmp/web_interface_running.txt'
 DEFAULT_CHANNEL = os.getenv('TARGET_CHANNEL', '@Miku_nakano111')
@@ -19,11 +22,11 @@ IMAGE_POST_INTERVAL = 1200  # 20 minutes
 REDDIT_POST_INTERVAL = 180  # 3 minutes
 
 # Add start time for uptime tracking
-app.config['START_TIME'] = time.time()
+START_TIME = time.time()
 
 # Write a file to indicate the web interface is running
 with open(WEB_RUNNING_FILE, 'w') as f:
-    f.write(str(int(time.time())))
+    f.write(str(int(START_TIME)))
 
 @app.route('/')
 def index():
@@ -38,7 +41,7 @@ def status():
         channel = '@' + channel
         
     # Current uptime in seconds
-    uptime = int(time.time() - app.config.get('START_TIME', time.time()))
+    uptime = int(time.time() - START_TIME)
     
     # Check if the bot is running in the run_miku_bot workflow
     bot_running = os.path.exists(BOT_RUNNING_FILE)
@@ -89,4 +92,9 @@ def test_reddit_post():
     return test_post('reddit')
 
 if __name__ == '__main__':
+    print("Starting standalone web dashboard...")
+    print(f"Bot running file: {BOT_RUNNING_FILE}")
+    print(f"Web running file: {WEB_RUNNING_FILE}")
+    print(f"Target channel: {DEFAULT_CHANNEL}")
+    print("==================================")
     app.run(host='0.0.0.0', port=5000)

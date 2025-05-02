@@ -1,0 +1,17 @@
+#!/bin/bash
+# Dedicated runner script for Miku Bot
+
+echo "===================================================="
+echo "🤖 Miku Bot 3.0 - Standalone Runner 🤖"
+echo "===================================================="
+
+# Force workflow name
+export REPL_WORKFLOW="run_miku_bot"
+
+# Kill existing processes
+pkill -f 'python.*5000' || true
+pkill -f 'python.*flask' || true
+sleep 1
+
+# Execute the direct bot
+python direct_miku_bot.py

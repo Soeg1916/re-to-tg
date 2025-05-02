@@ -108,27 +108,37 @@ def post_miku_image(context):
 def post_reddit_miku(context):
     """
     Scheduled job to post Miku content from Reddit.
-    Gets a batch of posts every 10 minutes.
+    Gets posts every 3 minutes with strict duplicate prevention.
     """
     try:
-        # Get a batch of Reddit posts (up to 3 at a time)
-        batch_posts = get_batch_posts(max_posts=3)
+        # Get a batch of Reddit posts (just 1 at a time to avoid flooding)
+        # We'll post more frequently (every 3 minutes) but with fewer posts each time
+        batch_posts = get_batch_posts(max_posts=1)
         
         if not batch_posts:
             logger.info("No new Reddit posts to share at this time")
             return
             
         for post in batch_posts:
+            # Check if this post URL has been shared before
+            image_url = post.get("image_url", "")
+            post_id = post.get("id", "")
+            
+            # Skip if we've posted this content before (double checking both URL and ID)
+            if is_in_history("urls", image_url) or is_in_history("post_ids", post_id):
+                logger.info(f"Skipping already shared post: {post_id}")
+                continue
+                
             # Send the post
             send_post(context, post)
             
-            # Record used content in history
-            add_to_history("urls", post["image_url"])
+            # Record used content in history with multiple identifiers
+            add_to_history("urls", image_url)
+            add_to_history("post_ids", post_id)
+            if "caption" in post:
+                add_to_history("captions", post["caption"])
             
-            # Small delay between posts to avoid flooding
-            time.sleep(1)
-        
-        logger.info(f"Posted {len(batch_posts)} Reddit posts in batch")
+            logger.info(f"Posted Reddit content: {post_id}")
         
     except Exception as e:
         logger.error(f"Error in post_reddit_miku: {e}")
@@ -147,15 +157,34 @@ def check_new_reddit_posts(context):
         
         logger.info(f"Found {len(new_posts)} new Reddit posts to share immediately")
         
+        # Only post one item at a time to avoid flooding
+        posted_count = 0
+        
         for post in new_posts:
+            # Get key identifiers from the post
+            image_url = post.get("image_url", "")
+            post_id = post.get("id", "")
+            
+            # Skip if we've posted this content before (double checking both URL and ID)
+            if is_in_history("urls", image_url) or is_in_history("post_ids", post_id):
+                logger.info(f"Skipping already shared post: {post_id}")
+                continue
+            
             # Send the post
             send_post(context, post)
             
-            # Record used content in history
-            add_to_history("urls", post["image_url"])
+            # Record used content in history with multiple identifiers
+            add_to_history("urls", image_url)
+            add_to_history("post_ids", post_id)
+            if "caption" in post:
+                add_to_history("captions", post["caption"])
             
-            # Small delay between posts to avoid flooding
-            time.sleep(1)
+            posted_count += 1
+            logger.info(f"Posted new Reddit content: {post_id}")
+            
+            # Only post one item per check to avoid flooding
+            if posted_count >= 1:
+                break
         
     except Exception as e:
         logger.error(f"Error in check_new_reddit_posts: {e}")
@@ -186,10 +215,10 @@ def setup_scheduler(updater: Updater):
         first=IMAGE_POST_INTERVAL // 2  # Start halfway between main posts
     )
     
-    # Schedule Reddit batch posts every 2 minutes
+    # Schedule Reddit batch posts every 3 minutes
     job_queue.run_repeating(
         post_reddit_miku,
-        interval=REDDIT_POST_INTERVAL,  # 2 minutes in seconds (from config)
+        interval=REDDIT_POST_INTERVAL,  # 3 minutes in seconds (from config)
         first=60  # Start after 1 minute
     )
     

@@ -1,8 +1,9 @@
 """
-Web-only module for use with the Start application workflow.
-This file is specifically designed to be used by Gunicorn.
-It completely bypasses bot initialization to avoid conflicts.
+Web-only interface for Miku Bot.
+This module should be imported ONLY by gunicorn, and provides ONLY the Flask app object.
+It does not include any bot functionality.
 """
+
 import os
 import time
 from flask import Flask, render_template, jsonify
@@ -16,8 +17,6 @@ app.config['START_TIME'] = time.time()
 # Write a file to indicate the web interface is running
 with open('/tmp/web_interface_running.txt', 'w') as f:
     f.write('1')
-
-print("✅ LOADING WEB-ONLY VERSION - NO BOT FUNCTIONALITY")
 
 @app.route('/')
 def index():
@@ -36,7 +35,7 @@ def status():
     # Current uptime in seconds
     uptime = int(time.time() - app.config.get('START_TIME', time.time()))
     
-    # Check if the bot is running 
+    # Check if the bot is running in the other workflow
     bot_running = os.path.exists('/tmp/bot_running.txt')
     
     return jsonify({

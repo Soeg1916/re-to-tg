@@ -1,29 +1,24 @@
 """
-Flask application for the Miku Bot Dashboard.
-This is a special file recognized by Replit.
+Minimal Flask app for the 'Start application' workflow.
+This is a completely stripped-down version to ensure it works with gunicorn.
 """
 
 import os
 import time
-from flask import Flask, render_template, jsonify, redirect, url_for
+from flask import Flask, render_template, jsonify
 
 # Create Flask app
 app = Flask(__name__)
 
-# Simple configuration
-BOT_RUNNING_FILE = '/tmp/bot_running.txt'
-WEB_RUNNING_FILE = '/tmp/web_interface_running.txt'
-DEFAULT_CHANNEL = os.getenv('TARGET_CHANNEL', '@Miku_nakano111')
+# Bot configuration
+DEFAULT_CHANNEL = os.getenv('TARGET_CHANNEL')
 MAIN_POST_INTERVAL = 600  # 10 minutes
 IMAGE_POST_INTERVAL = 1200  # 20 minutes
 REDDIT_POST_INTERVAL = 180  # 3 minutes
+BOT_RUNNING_FILE = '/tmp/bot_running.txt'
 
 # Add start time for uptime tracking
 app.config['START_TIME'] = time.time()
-
-# Write a file to indicate the web interface is running
-with open(WEB_RUNNING_FILE, 'w') as f:
-    f.write(str(int(time.time())))
 
 @app.route('/')
 def index():
@@ -87,6 +82,3 @@ def test_post(post_type):
 def test_reddit_post():
     """Redirect to the new endpoint structure for Reddit posts"""
     return test_post('reddit')
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)

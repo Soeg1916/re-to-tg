@@ -24,13 +24,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger("miku_bot")
 
-# Check required environment variables
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+# Check required environment variables - support multiple token variable names
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("BOT_TOKEN")
 TARGET_CHANNEL = os.environ.get("TARGET_CHANNEL")
 
 # Messaging when token is missing
 if not BOT_TOKEN:
-    logger.error("BOT_TOKEN is missing! Set it in your environment variables.")
+    logger.error("TELEGRAM_BOT_TOKEN or BOT_TOKEN is missing! Set it in your environment variables.")
     sys.exit(1)
 
 if not TARGET_CHANNEL:
@@ -105,16 +105,18 @@ def status_command(update, context):
     hours, remainder = divmod(uptime, 3600)
     minutes, seconds = divmod(remainder, 60)
     
+    from config import MAIN_POST_INTERVAL, IMAGE_POST_INTERVAL, REDDIT_POST_INTERVAL
+    
     status_message = (
         f"🤖 Miku Bot Status 🤖\n\n"
         f"✅ Bot is running\n"
         f"⏱️ Uptime: {int(hours)}h {int(minutes)}m {int(seconds)}s\n"
         f"📊 Target channel: {TARGET_CHANNEL}\n"
         f"🔄 Posting schedule active\n"
-        f"- Miku facts: Every 6 hours\n"
-        f"- Miku images: Every 3 hours\n"
-        f"- Reddit content: Every 2 hours\n\n"
-        f"Bot version: 1.0.0"
+        f"- Miku facts: Every {MAIN_POST_INTERVAL // 60} minutes\n"
+        f"- Miku images: Every {IMAGE_POST_INTERVAL // 60} minutes\n"
+        f"- Reddit content: Every {REDDIT_POST_INTERVAL // 60} minutes with no repetitions\n\n"
+        f"Bot version: 1.0.2"
     )
     
     context.bot.send_message(chat_id=user_id, text=status_message)
@@ -183,7 +185,7 @@ def setup_and_run_bot():
     try:
         # Create a file to indicate the bot is running
         with open("/tmp/bot_running.txt", "w") as f:
-            f.write(f"Bot started at {datetime.now().isoformat()}")
+            f.write(str(int(start_time)))
         
         # Set up the bot
         updater = Updater(token=BOT_TOKEN)
@@ -207,7 +209,7 @@ def setup_and_run_bot():
         updater.idle()
     
     except telegram.error.InvalidToken:
-        logger.error("Invalid bot token! Please check your BOT_TOKEN environment variable.")
+        logger.error("Invalid bot token! Please check your TELEGRAM_BOT_TOKEN environment variable.")
         with open("/tmp/bot_failed.txt", "w") as f:
             f.write("Invalid bot token")
     

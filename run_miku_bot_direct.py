@@ -3,56 +3,73 @@
 Direct execution script for the run_miku_bot workflow.
 This script is standalone and does not use Flask or any web components.
 """
+
 import os
 import sys
+import time
 import logging
+import signal
 import subprocess
 
 # Configure logging
 logging.basicConfig(
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    handlers=[
+        logging.FileHandler("miku_bot_direct.log"),
+        logging.StreamHandler()
+    ]
 )
-logger = logging.getLogger("MIKU_BOT_LAUNCHER")
+logger = logging.getLogger("miku_bot_direct")
+
+# Signal handling for graceful shutdown
+def signal_handler(sig, frame):
+    logger.info(f"Received signal {sig}, shutting down...")
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 def main():
-    # Check if we're in the right workflow
-    workflow = os.environ.get('REPL_WORKFLOW', '')
-    print(f"Current workflow: {workflow}")
+    """Main entry point - directly run the bot with no Flask"""
     
-    # This script is designed to run in both direct execution and in the run_miku_bot workflow
+    logger.info("=" * 60)
+    logger.info("🚀 DIRECT MIKU BOT LAUNCHER 🚀")
+    logger.info("This bypasses main.py and Flask to avoid port conflicts")
+    logger.info("=" * 60)
     
-    # Remove any lock files to ensure clean execution
-    for file_path in ['/tmp/bot_running.txt', '/tmp/web_interface_running.txt', '/tmp/bot_failed.txt']:
-        if os.path.exists(file_path):
-            print(f"Removing lock file: {file_path}")
-            os.remove(file_path)
+    # Force the workflow environment
+    os.environ["REPL_WORKFLOW"] = "run_miku_bot"
     
-    # Print banner
-    print("=" * 60)
-    print("MIKU BOT DIRECT LAUNCHER")
-    print("This script bypasses main.py and all Flask dependencies")
-    print("=" * 60)
-    
-    # Import bot code directly
+    # Kill any competing processes
     try:
-        print("Launching standalone bot...")
-        
-        # Set a environment variable to indicate direct execution
-        os.environ['MIKU_BOT_DIRECT_EXECUTION'] = 'true'
-        
-        # Execute the imported module - we avoid using 'import' to prevent circular imports
-        command = [sys.executable, 'main_run_bot.py']
-        result = subprocess.run(command)
-        
-        if result.returncode != 0:
-            print(f"Bot process exited with error code: {result.returncode}")
-            return 1
-        
-        return 0
+        logger.info("Killing any competing processes...")
+        subprocess.run("pkill -f 'python.*flask'", shell=True)
+        subprocess.run("pkill -f 'python.*5000'", shell=True)
+        time.sleep(1)
     except Exception as e:
-        print(f"Error launching bot: {e}")
+        logger.error(f"Error killing processes: {e}")
+    
+    # Find the direct_miku_bot.py script
+    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "direct_miku_bot.py")
+    
+    if os.path.exists(script_path):
+        logger.info(f"Found bot script: {script_path}")
+        
+        # Make it executable
+        try:
+            subprocess.run(['chmod', '+x', script_path], check=True)
+        except Exception as e:
+            logger.warning(f"Could not make script executable: {e}")
+        
+        # Execute the script directly
+        logger.info("Executing direct_miku_bot.py...")
+        os.execl(sys.executable, sys.executable, script_path)
+    else:
+        logger.error(f"Bot script not found: {script_path}")
         return 1
+    
+    return 0
 
 if __name__ == "__main__":
     sys.exit(main())

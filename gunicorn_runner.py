@@ -2,19 +2,18 @@
 Special main application file designed to be used ONLY by Gunicorn.
 This completely avoids running any bot code to prevent conflicts.
 """
+
 import os
 import time
-import logging
 from flask import Flask, render_template, jsonify
-
-# Set up logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+from config import (
+    DEFAULT_CHANNEL, 
+    MAIN_POST_INTERVAL, 
+    IMAGE_POST_INTERVAL, 
+    REDDIT_POST_INTERVAL,
+    BOT_RUNNING_FILE,
+    WEB_RUNNING_FILE
 )
-
-logger = logging.getLogger(__name__)
-print("✅ GUNICORN SPECIAL RUNNER - WEB INTERFACE ONLY, NO BOT!")
 
 # Create Flask app
 app = Flask(__name__)
@@ -22,9 +21,9 @@ app = Flask(__name__)
 # Add start time for uptime tracking
 app.config['START_TIME'] = time.time()
 
-# Create a file to signal that the bot is already running
-with open('/tmp/bot_running_elsewhere.txt', 'w') as f:
-    f.write('1')
+# Write a file to indicate the web interface is running
+with open(WEB_RUNNING_FILE, 'w') as f:
+    f.write(str(int(time.time())))
 
 @app.route('/')
 def index():
@@ -34,8 +33,6 @@ def index():
 @app.route('/status')
 def status():
     """API endpoint to check bot status"""
-    from config import DEFAULT_CHANNEL, MAIN_POST_INTERVAL, IMAGE_POST_INTERVAL, REDDIT_POST_INTERVAL
-    
     channel = DEFAULT_CHANNEL
     if channel and not channel.startswith('@'):
         channel = '@' + channel
@@ -43,38 +40,47 @@ def status():
     # Current uptime in seconds
     uptime = int(time.time() - app.config.get('START_TIME', time.time()))
     
+    # Check if the bot is running in the run_miku_bot workflow
+    bot_running = os.path.exists(BOT_RUNNING_FILE)
+    
+    # Get bot uptime if available
+    bot_uptime = 0
+    if bot_running and os.path.exists(BOT_RUNNING_FILE):
+        try:
+            with open(BOT_RUNNING_FILE, 'r') as f:
+                start_time = int(f.read().strip() or '0')
+                if start_time > 0:
+                    bot_uptime = int(time.time() - start_time)
+        except:
+            bot_uptime = 0
+    
     return jsonify({
         "status": "web_only",
         "bot_name": "Nakano Miku Bot",
-        "version": "1.0.0",
+        "version": "1.0.1",
         "channel": channel,
         "uptime_seconds": uptime,
         "uptime_human": f"{uptime // 86400}d {(uptime % 86400) // 3600}h {(uptime % 3600) // 60}m {uptime % 60}s",
+        "bot_uptime_seconds": bot_uptime,
+        "bot_uptime_human": f"{bot_uptime // 86400}d {(bot_uptime % 86400) // 3600}h {(bot_uptime % 3600) // 60}m {bot_uptime % 60}s",
         "intervals": {
             "main_fact_interval_minutes": MAIN_POST_INTERVAL // 60,
             "image_interval_minutes": IMAGE_POST_INTERVAL // 60,
             "reddit_interval_minutes": REDDIT_POST_INTERVAL // 60
         },
         "reddit_enabled": bool(os.getenv("REDDIT_CLIENT_ID") and os.getenv("REDDIT_CLIENT_SECRET")),
+        "bot_running": bot_running,
         "mode": "Web Interface Only (Bot running in separate workflow)",
         "keepalive": True
     })
-
+    
 @app.route('/api/test/post/<post_type>', methods=['GET'])
 def test_post(post_type):
     """API endpoint to manually trigger different types of posts"""
-    # Validate post type
-    valid_types = ['fact', 'image', 'reddit']
-    if post_type not in valid_types:
-        return jsonify({
-            "success": False,
-            "message": f"Invalid post type. Must be one of: {', '.join(valid_types)}"
-        }), 400
-    
     return jsonify({
         "success": False,
         "message": "This is a web-only instance. The bot is running in a separate workflow.",
-        "note": "To test posting, restart the run_miku_bot workflow."
+        "instructions": "To test post functionality, go to the run_miku_bot workflow"
     }), 503
 
 @app.route('/api/test/reddit-post', methods=['GET'])

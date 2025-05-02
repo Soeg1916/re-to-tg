@@ -1,17 +1,24 @@
 #!/bin/bash
-# Special shell script to ensure the bot runs directly without any Flask dependencies
-# This script should be used by the run_miku_bot workflow
 
-# Exit on any error
-set -e
+# DIRECT BOT EXECUTION SCRIPT
+# This script is designed to be executed directly by the run_miku_bot workflow
 
-echo "=================================================="
-echo "DIRECT BOT EXECUTION"
-echo "This script completely bypasses main.py"
-echo "=================================================="
+echo "===================================================="
+echo "🤖 Miku Bot 3.0 - Direct Execution 🤖"
+echo "===================================================="
 
-# Clean up any previous lock files
-rm -f /tmp/bot_running.txt /tmp/bot_failed.txt
+# Kill competing processes
+echo "Killing any competing processes..."
+pkill -f 'python.*5000' || true
+pkill -f 'python.*flask' || true
+sleep 1
 
-# Run the completely standalone bot script
-exec python direct_miku_bot.py
+# Force workflow identification
+export REPL_WORKFLOW="run_miku_bot"
+
+# Create marker file to help with identification
+touch .run_miku_bot
+
+# Run the bot directly
+echo "Starting the bot directly..."
+python run_miku_bot.py

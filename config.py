@@ -1,32 +1,37 @@
+"""
+Shared configuration between bot and web interface
+"""
 import os
 
-# Telegram bot configuration
-DEFAULT_CHANNEL = os.getenv("TELEGRAM_CHANNEL_USERNAME", "")
+# Bot configuration
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+DEFAULT_CHANNEL = os.getenv('TARGET_CHANNEL')
 
-# Reddit API configuration
-REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID", "")
-REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET", "")
-REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT", "MikuBot/1.0")
+# Intervals (in seconds)
+MAIN_POST_INTERVAL = 600  # 10 minutes
+IMAGE_POST_INTERVAL = 1200  # 20 minutes
+REDDIT_POST_INTERVAL = 180  # 3 minutes
 
-# Reddit subreddits to fetch Miku content from
-MIKU_SUBREDDITS = [
-    "5ToubunNoHanayome",
-    "churchofmiku",
-    "MikuNakano",
-    "Nakano_Miku"
+# Reddit configuration
+REDDIT_CLIENT_ID = os.getenv('REDDIT_CLIENT_ID')
+REDDIT_CLIENT_SECRET = os.getenv('REDDIT_CLIENT_SECRET')
+REDDIT_USER_AGENT = 'Miku Bot v1.0'
+
+# Status file paths
+BOT_RUNNING_FILE = '/tmp/bot_running.txt'
+WEB_RUNNING_FILE = '/tmp/web_interface_running.txt'
+
+# Subreddits to track
+SUBREDDITS = [
+    'MikuNakano',
+    '5ToubunNoHanayome',
+    'churchofmiku'  # This one returns 404 but we still try
 ]
 
-# API endpoints for anime images
+# Alias for backward compatibility
+MIKU_SUBREDDITS = SUBREDDITS
+
+# API endpoints
 WAIFU_PICS_API = "https://api.waifu.pics/sfw/waifu"
-ANIME_PICS_API = "https://api.waifu.im/search"
-# Use specifically nakano_miku tag to only get Miku from Quintessential Quintuplets
-SAFEBOORU_API = "https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&tags=nakano_miku+rating%3asafe"
-
-# Scheduling intervals (in seconds)
-# These can be customized via environment variables
-MAIN_POST_INTERVAL = int(os.getenv("MAIN_POST_INTERVAL", 10)) * 60  # Every 10 minutes for photo+text posts
-IMAGE_POST_INTERVAL = int(os.getenv("IMAGE_POST_INTERVAL", 10)) * 60  # Every 10 minutes for regular image posts
-REDDIT_POST_INTERVAL = int(os.getenv("REDDIT_POST_INTERVAL", 2)) * 60  # Every 2 minutes for Reddit posts
-
-# Paths for data storage
-HISTORY_FILE = "post_history.json"
+WAIFU_IM_API = "https://api.waifu.im/search/?included_tags=maid&included_tags=raiden-shogun&included_tags=oppai&is_nsfw=false"
+SAFEBOORU_API = "https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&limit=100&tags=nakano_miku"

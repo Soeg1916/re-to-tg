@@ -3,293 +3,262 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nakano Miku Bot Status</title>
-    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <title>Miku Bot Dashboard</title>
     <style>
         body {
-            background-color: #1a1a2e;
-            color: #f0f0f0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
         }
-        .miku-container {
+        
+        .container {
             max-width: 800px;
             margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             padding: 20px;
         }
-        .miku-header {
+        
+        h1 {
+            color: #1e88e5;
             text-align: center;
             margin-bottom: 30px;
+            font-size: 2.5rem;
         }
-        .miku-card {
-            background-color: rgba(30, 41, 59, 0.7);
-            border-radius: 10px;
-            padding: 20px;
+        
+        .status-card {
+            background-color: #f0f8ff;
+            border-left: 5px solid #1e88e5;
+            padding: 15px;
             margin-bottom: 20px;
-            border-left: 4px solid #3498db;
+            border-radius: 4px;
         }
-        .status-indicator {
-            display: inline-block;
-            width: 15px;
-            height: 15px;
-            border-radius: 50%;
+        
+        .error-card {
+            background-color: #fff0f0;
+            border-left: 5px solid #e53935;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .status-item {
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .status-label {
+            font-weight: bold;
             margin-right: 10px;
         }
-        .status-running {
-            background-color: #2ecc71;
-            box-shadow: 0 0 10px #2ecc71;
+        
+        .status-value {
+            text-align: right;
         }
-        .status-stopped {
-            background-color: #e74c3c;
-            box-shadow: 0 0 10px #e74c3c;
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
         }
-        .miku-info {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
+        
+        .status-online {
+            background-color: #4caf50;
         }
-        .info-item {
-            flex: 1 1 200px;
-            background-color: rgba(44, 62, 80, 0.7);
-            padding: 15px;
-            border-radius: 8px;
+        
+        .status-offline {
+            background-color: #f44336;
         }
-        .miku-image {
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .button {
+            display: inline-block;
+            background-color: #1e88e5;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        .button:hover {
+            background-color: #1976d2;
+        }
+        
+        .button-disabled {
+            background-color: #9e9e9e;
+            cursor: not-allowed;
+        }
+        
+        .button-disabled:hover {
+            background-color: #9e9e9e;
+        }
+        
+        footer {
             text-align: center;
-            margin: 30px 0;
+            margin-top: 30px;
+            color: #757575;
+            font-size: 0.9rem;
         }
-        .miku-image img {
-            max-width: 100%;
-            max-height: 300px;
-            border-radius: 10px;
+        
+        #last-updated {
+            font-style: italic;
+            color: #757575;
+            font-size: 0.9rem;
+            text-align: right;
         }
     </style>
 </head>
 <body>
-    <div class="container miku-container">
-        <div class="miku-header">
-            <h1>Nakano Miku Telegram Bot 💙</h1>
-            <p>Autonomous bot that posts Miku content at regular intervals</p>
+    <div class="container">
+        <h1>Miku Bot Dashboard</h1>
+        
+        <div id="error-message" class="error-card">
+            <p><strong>Error:</strong> <span id="error-text">Could not connect to the server.</span></p>
         </div>
-
-        <div class="miku-card">
+        
+        <div class="section">
             <h2>Bot Status</h2>
-            <p>
-                <span class="status-indicator status-running" id="status-dot"></span>
-                <span id="status-text">Running</span>
-            </p>
-            <div class="miku-info">
-                <div class="info-item">
-                    <h4>Post Intervals</h4>
-                    <ul>
-                        <li>Facts: Every <span id="fact-interval">30</span> minutes</li>
-                        <li>Images: Every <span id="image-interval">15</span> minutes</li>
-                        <li>Reddit content: Every <span id="reddit-interval">60</span> minutes</li>
-                    </ul>
-                    <p><small>Intervals can be customized via environment variables:</small></p>
-                    <ul class="small">
-                        <li><code>MAIN_POST_INTERVAL</code></li>
-                        <li><code>IMAGE_POST_INTERVAL</code></li>
-                        <li><code>REDDIT_POST_INTERVAL</code></li>
-                    </ul>
+            <div class="status-card">
+                <div class="status-item">
+                    <span class="status-label">Status:</span>
+                    <span class="status-value">
+                        <span id="bot-status-indicator" class="status-indicator status-offline"></span>
+                        <span id="bot-status-text">Offline</span>
+                    </span>
                 </div>
-                <div class="info-item">
-                    <h4>Content Sources</h4>
-                    <ul>
-                        <li>waifu.im API</li>
-                        <li>Safebooru</li>
-                        <li>Reddit</li>
-                        <li>waifu.pics (fallback)</li>
-                    </ul>
+                <div class="status-item">
+                    <span class="status-label">Bot Name:</span>
+                    <span id="bot-name" class="status-value">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Version:</span>
+                    <span id="bot-version" class="status-value">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Target Channel:</span>
+                    <span id="bot-channel" class="status-value">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Uptime:</span>
+                    <span id="bot-uptime" class="status-value">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Mode:</span>
+                    <span id="bot-mode" class="status-value">-</span>
                 </div>
             </div>
         </div>
-
-        <div class="miku-card">
-            <h2>About Nakano Miku</h2>
-            <p>Nakano Miku is the third sister among the quintuplets in "The Quintessential Quintuplets" (Gotoubun no Hanayome). She's known for her blue headphones, love of Japanese history, and her initially shy but determined personality.</p>
-            <div class="miku-image">
-                <img src="https://i.imgur.com/JqYjTmh.jpg" alt="Nakano Miku" id="miku-image">
-            </div>
-        </div>
-
-        <div class="miku-card">
-            <h2>Commands</h2>
-            <ul>
-                <li><strong>/start</strong> - Subscribe to Miku updates</li>
-            </ul>
-        </div>
         
-        <div class="miku-card">
-            <h2>Manual Posting Controls</h2>
-            <p>Use these buttons to manually trigger different types of posts:</p>
-            <div class="manual-controls">
-                <button id="post-fact-btn" class="btn btn-primary">Post Miku Fact</button>
-                <button id="post-image-btn" class="btn btn-info">Post Miku Image</button>
-                <button id="post-reddit-btn" class="btn btn-warning">Post Reddit Content</button>
-            </div>
-            <div id="post-result" class="mt-3" style="display: none;">
-                <div class="alert" role="alert"></div>
+        <div class="section">
+            <h2>Post Intervals</h2>
+            <div class="status-card">
+                <div class="status-item">
+                    <span class="status-label">Fact Posts:</span>
+                    <span id="fact-interval" class="status-value">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Image Posts:</span>
+                    <span id="image-interval" class="status-value">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Reddit Posts:</span>
+                    <span id="reddit-interval" class="status-value">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Reddit Integration:</span>
+                    <span id="reddit-status" class="status-value">-</span>
+                </div>
             </div>
         </div>
         
-        <div class="miku-card">
-            <h2>Troubleshooting</h2>
-            <div class="info-item">
-                <h4>Bot Can't Post to Channel</h4>
-                <p>For the bot to post to your Telegram channel, you need to:</p>
-                <ol>
-                    <li>Add your bot as an administrator to your channel</li>
-                    <li>Make sure the bot has the "Post Messages" permission</li>
-                </ol>
-                <p><strong>Note:</strong> The bot needs to be an administrator to post to the channel, not just a member.</p>
-            </div>
-            <div class="info-item">
-                <h4>Reddit Content Not Working</h4>
-                <p>To enable Reddit content posting, you'll need to:</p>
-                <ol>
-                    <li>Create a Reddit application at <a href="https://www.reddit.com/prefs/apps" target="_blank">reddit.com/prefs/apps</a></li>
-                    <li>Add these environment variables:
-                        <ul>
-                            <li>REDDIT_CLIENT_ID</li>
-                            <li>REDDIT_CLIENT_SECRET</li>
-                            <li>REDDIT_USER_AGENT (optional, defaults to "MikuBot/1.0")</li>
-                        </ul>
-                    </li>
-                </ol>
+        <div class="section">
+            <h2>Manual Post Actions</h2>
+            <p>These actions only work in the bot workflow. In the web-only interface, these buttons are inactive.</p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <a href="/api/test/post/fact" id="post-fact-btn" class="button button-disabled">Post Fact</a>
+                <a href="/api/test/post/image" id="post-image-btn" class="button button-disabled">Post Image</a>
+                <a href="/api/test/post/reddit" id="post-reddit-btn" class="button button-disabled">Post Reddit</a>
             </div>
         </div>
         
-        <div class="miku-card">
-            <h2>Setup Guide</h2>
-            <p>For the bot to work properly:</p>
-            <ol>
-                <li>Add your bot to your Telegram channel as an <strong>administrator</strong></li>
-                <li>Give the bot <strong>post messages</strong> permission</li>
-                <li>If your channel is private, you may need to use the channel's ID instead of username</li>
-            </ol>
-            <p>Current channel: <strong id="channel-name">Loading...</strong></p>
-            <p class="text-warning"><small>Note: If you're seeing errors about the bot not having permission, please follow the steps above.</small></p>
+        <div id="last-updated">
+            Last updated: <span id="update-time">-</span>
         </div>
+        
+        <footer>
+            &copy; 2025 Miku Bot | Built with ❤️ for Nakano Miku
+        </footer>
     </div>
 
     <script>
-        // Check status periodically
-        function checkStatus() {
+        // Fetch bot status every 5 seconds
+        function updateStatus() {
             fetch('/status')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
-                    const statusDot = document.getElementById('status-dot');
-                    const statusText = document.getElementById('status-text');
-                    const channelName = document.getElementById('channel-name');
+                    // Update bot status
+                    const botRunning = data.bot_running;
+                    document.getElementById('bot-status-indicator').className = 
+                        `status-indicator status-${botRunning ? 'online' : 'offline'}`;
+                    document.getElementById('bot-status-text').textContent = 
+                        botRunning ? 'Online (Running in separate workflow)' : 'Offline';
                     
-                    if (data.status === 'running') {
-                        statusDot.className = 'status-indicator status-running';
-                        statusText.textContent = 'Running';
-                    } else {
-                        statusDot.className = 'status-indicator status-stopped';
-                        statusText.textContent = 'Stopped';
-                    }
+                    // Update basic info
+                    document.getElementById('bot-name').textContent = data.bot_name || '-';
+                    document.getElementById('bot-version').textContent = data.version || '-';
+                    document.getElementById('bot-channel').textContent = data.channel || '-';
+                    document.getElementById('bot-uptime').textContent = data.uptime_human || '-';
+                    document.getElementById('bot-mode').textContent = data.mode || '-';
                     
-                    // Update channel name if available
-                    if (data.channel) {
-                        channelName.textContent = data.channel;
-                    }
+                    // Update intervals
+                    document.getElementById('fact-interval').textContent = 
+                        `Every ${data.intervals?.main_fact_interval_minutes || '-'} minutes`;
+                    document.getElementById('image-interval').textContent = 
+                        `Every ${data.intervals?.image_interval_minutes || '-'} minutes`;
+                    document.getElementById('reddit-interval').textContent = 
+                        `Every ${data.intervals?.reddit_interval_minutes || '-'} minutes`;
+                    document.getElementById('reddit-status').textContent = 
+                        data.reddit_enabled ? 'Enabled' : 'Disabled';
                     
-                    // Update interval information if available
-                    if (data.intervals) {
-                        // Update facts interval
-                        const factInterval = document.getElementById('fact-interval');
-                        if (factInterval && data.intervals.main_fact_interval_minutes) {
-                            factInterval.textContent = data.intervals.main_fact_interval_minutes;
-                        }
-                        
-                        // Update images interval
-                        const imageInterval = document.getElementById('image-interval');
-                        if (imageInterval && data.intervals.image_interval_minutes) {
-                            imageInterval.textContent = data.intervals.image_interval_minutes;
-                        }
-                        
-                        // Update Reddit interval
-                        const redditInterval = document.getElementById('reddit-interval');
-                        if (redditInterval && data.intervals.reddit_interval_minutes) {
-                            redditInterval.textContent = data.intervals.reddit_interval_minutes;
-                        }
-                    }
+                    // Update buttons (disabled in web-only mode)
+                    const buttons = ['post-fact-btn', 'post-image-btn', 'post-reddit-btn'];
+                    buttons.forEach(btn => {
+                        document.getElementById(btn).className = 'button button-disabled';
+                    });
+                    
+                    // Hide error message
+                    document.getElementById('error-message').style.display = 'none';
+                    
+                    // Update timestamp
+                    const now = new Date();
+                    document.getElementById('update-time').textContent = now.toLocaleTimeString();
                 })
                 .catch(error => {
                     console.error('Error fetching status:', error);
-                    const statusDot = document.getElementById('status-dot');
-                    const statusText = document.getElementById('status-text');
-                    statusDot.className = 'status-indicator status-stopped';
-                    statusText.textContent = 'Error checking status';
+                    document.getElementById('error-message').style.display = 'block';
+                    document.getElementById('error-text').textContent = 
+                        'Could not connect to the server. The bot service might be restarting.';
                 });
         }
-
-        // Check status immediately and then every 10 seconds
-        checkStatus();
-        setInterval(checkStatus, 10000);
         
-        // Manual posting buttons
-        document.getElementById('post-fact-btn').addEventListener('click', function() {
-            triggerPost('fact');
-        });
+        // Initial update
+        updateStatus();
         
-        document.getElementById('post-image-btn').addEventListener('click', function() {
-            triggerPost('image');
-        });
-        
-        document.getElementById('post-reddit-btn').addEventListener('click', function() {
-            triggerPost('reddit');
-        });
-        
-        // Function to trigger manual posts
-        function triggerPost(type) {
-            // Disable all buttons
-            document.querySelectorAll('.manual-controls button').forEach(btn => {
-                btn.disabled = true;
-            });
-            
-            // Show loading state
-            const resultDiv = document.getElementById('post-result');
-            const alertDiv = resultDiv.querySelector('.alert');
-            resultDiv.style.display = 'block';
-            alertDiv.className = 'alert alert-info';
-            alertDiv.textContent = `Sending ${type} post... Please wait.`;
-            
-            // Fetch the API
-            fetch(`/api/test/post/${type}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alertDiv.className = 'alert alert-success';
-                        alertDiv.innerHTML = `<strong>Success!</strong> ${data.message}<br>
-                            <small>Caption: ${data.post.caption_preview || 'N/A'}</small>`;
-                    } else {
-                        alertDiv.className = 'alert alert-danger';
-                        alertDiv.innerHTML = `<strong>Error:</strong> ${data.message}`;
-                    }
-                })
-                .catch(error => {
-                    alertDiv.className = 'alert alert-danger';
-                    alertDiv.textContent = `Error: ${error.message || 'Unknown error occurred'}`;
-                })
-                .finally(() => {
-                    // Re-enable buttons
-                    document.querySelectorAll('.manual-controls button').forEach(btn => {
-                        btn.disabled = false;
-                    });
-                    
-                    // Auto-hide the message after 10 seconds
-                    setTimeout(() => {
-                        resultDiv.style.display = 'none';
-                    }, 10000);
-                });
-        }
+        // Set interval for updates
+        setInterval(updateStatus, 5000);
     </script>
 </body>
 </html>
