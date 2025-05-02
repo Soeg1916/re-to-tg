@@ -1,37 +1,67 @@
 """
-Main entry point that routes between bot-only mode and web-only mode.
+Main entry point for Miku Bot web dashboard.
+This file is used by Gunicorn to serve the web interface on Render.
 """
 
-import sys
 import os
+import logging
+import time
+from flask import Flask, render_template, jsonify
 
-# Check for the run_miku_bot workflow by looking for marker file
-IS_RUN_MIKU_BOT = os.path.exists('.run_miku_bot')
-# Check for Gunicorn
-IS_GUNICORN = 'gunicorn' in ' '.join(sys.argv)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Import our app
-from app_simple import app as flask_app
+# Create the app
+app = Flask(__name__)
 
-# Export the app for Gunicorn to use
-app = flask_app  
+@app.route('/')
+def index():
+    """Main page to show bot status"""
+    return render_template('index.html', title="Miku Bot Dashboard")
 
-# If we're in the run_miku_bot workflow and not under Gunicorn
-if IS_RUN_MIKU_BOT and not IS_GUNICORN:
-    print("✅ MIKU BOT WORKFLOW DETECTED")
-    print("✅ EXECUTING DIRECT SCRIPT WITH 3-MINUTE REDDIT POSTS")
-    
-    # Kill any competing processes
-    print("Killing any competing processes...")
-    os.system("pkill -f 'python.*flask'")
-    
-    # Run the dedicated bot script
-    print("Running direct runner: direct_miku_bot.py")
-    os.system(f"python direct_miku_bot.py")
+@app.route('/api/status')
+def status():
+    """API endpoint to check bot status"""
+    # In Render deployment, bot is running in worker service
+    # We'll use a different method to check status
+    try:
+        # Check for existence of the marker file that the bot worker creates
+        bot_running = os.path.exists("/tmp/bot_running.txt")
+        
+        # Additionally check the timestamp if the file exists
+        last_seen = None
+        if bot_running and os.path.exists("/tmp/bot_last_seen.txt"):
+            try:
+                with open("/tmp/bot_last_seen.txt", "r") as f:
+                    last_seen = int(f.read().strip())
+            except:
+                last_seen = int(time.time())
+        
+        return jsonify({
+            "is_running": bot_running,
+            "version": "1.0.2",
+            "mode": "Render Deployment (Bot running in worker service)",
+            "last_seen": last_seen
+        })
+    except Exception as e:
+        logger.exception(f"Error checking bot status: {e}")
+        return jsonify({
+            "is_running": False,
+            "version": "1.0.2",
+            "mode": "Render Deployment (Status check error)",
+            "error": str(e)
+        }), 500
 
-# When run directly outside of Gunicorn
-if __name__ == '__main__' and not IS_GUNICORN:
-    # Run the Flask app if not in the bot workflow
-    if not IS_RUN_MIKU_BOT:
-        print("Starting web server in standalone mode...")
-        flask_app.run(host='0.0.0.0', port=5000)
+@app.route('/api/test_post/<post_type>')
+def test_post(post_type):
+    """API endpoint to manually trigger different types of posts"""
+    return jsonify({
+        "success": False,
+        "message": "Manual posting disabled in Render deployment."
+    })
+
+# Run the app directly when not using Gunicorn
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
