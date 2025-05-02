@@ -1,0 +1,23 @@
+# Core functionality files
+api_clients.py       # API client implementations
+config.py           # Configuration settings
+facts.py            # Miku facts
+handlers.py         # Telegram message handlers
+reddit_tracker.py   # Reddit tracking functionality  
+scheduler.py        # Scheduling system
+storage.py          # Data storage utilities
+bot.py              # Main bot implementation
+
+# Main application files
+main.py             # Entry point 
+app_simple.py       # Web interface for dashboard
+
+# Production files
+run_miku_bot_standalone.py # Production-ready standalone script
+healthcheck.py      # Health check for cloud hosting
+requirements.txt    # Python dependencies
+Procfile            # For cloud deployment
+
+# Templates and static files
+templates/          # HTML templates
+static/             # CSS, JS, images
