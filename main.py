@@ -1,32 +1,44 @@
-import os, sys; wf = os.environ.get("REPL_WORKFLOW", ""); print(f"WORKFLOW: {wf}"); (wf == "run_miku_bot") and __import__("os").system("python direct_bot_runner.py") and sys.exit(0)
-import logging
+#!/usr/bin/env python
+"""
+Main entry point for all workflows.
+This script detects which workflow is running and routes execution appropriately.
+"""
 import os
 import sys
+import logging
 import socket
 
-# CRITICAL: Immediate workflow detection before ANY other imports
-# Get the current workflow name from environment variable
-current_workflow = os.environ.get('REPL_WORKFLOW', '')
+# CRITICAL: Immediate workflow check at the top
+workflow = os.environ.get('REPL_WORKFLOW', '')
+print(f"Detected workflow: {workflow}")
 
-# If this is the run_miku_bot workflow, immediately redirect to our direct bot runner
-# This completely bypasses Flask and avoids any port conflicts
-if current_workflow == 'run_miku_bot':
-    print("==================================================")
-    print("CRITICAL WORKFLOW DETECTION: run_miku_bot detected!")
-    print("IMMEDIATELY redirecting to direct_bot_runner.py")
-    print("This completely avoids importing Flask to prevent port conflicts")
-    print("==================================================")
+# For the run_miku_bot workflow, immediately run the stand-alone bot
+if workflow == 'run_miku_bot':
+    # The key is to use a direct system call instead of importing,
+    # which avoids any issues with module conflicts
+    print("=================================================")
+    print("CRITICAL: Detected run_miku_bot workflow")
+    print("IMMEDIATELY executing run_bot.py in a separate process")
+    print("=================================================")
     
+    # Execute the bot in a separate process and exit early
+    import subprocess
+    
+    # This is critical to avoid any port conflicts
     try:
-        # Execute our direct bot runner and exit
-        # Using execfile equivalent for Python 3
-        with open('direct_bot_runner.py') as f:
-            code = compile(f.read(), 'direct_bot_runner.py', 'exec')
-            exec(code, globals(), locals())
+        print("Starting bot in standalone mode...")
+        subprocess.run([sys.executable, "run_bot.py"], check=True)
         sys.exit(0)
     except Exception as e:
-        print(f"Error redirecting to direct_bot_runner.py: {e}")
-        # If something goes wrong, fall back to standard execution
+        import traceback
+        print(f"Error running bot: {e}")
+        traceback.print_exc()
+        
+        # Keep the process alive even on error
+        import time
+        while True:
+            print("Waiting for manual intervention...")
+            time.sleep(60)
 
 # Function to check if a port is in use
 def is_port_in_use(port):
