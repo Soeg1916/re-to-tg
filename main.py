@@ -271,5 +271,16 @@ def main():
     app.run(host='0.0.0.0', port=5000)
 
 # Only start the bot when running directly, not when imported by gunicorn
+# Also, don't start the bot if the env variable NO_BOT is set
 if __name__ == '__main__':
-    main()
+    # Check if we've already detected another bot instance
+    if os.path.exists('/tmp/bot_instance_running.txt'):
+        print("Another bot instance is already running. This instance will only run the web interface.")
+        # Run Flask without the bot thread
+        app.run(host='0.0.0.0', port=5000)
+    else:
+        # Mark that we're running a bot instance
+        with open('/tmp/bot_instance_running.txt', 'w') as f:
+            f.write('1')
+        # Run the full app with bot
+        main()
